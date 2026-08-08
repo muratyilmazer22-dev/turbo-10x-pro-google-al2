@@ -1,0 +1,21 @@
+{
+  "short_name": "TURBO-10X",
+  "name": "TURBO-10X PRO Yarış Analiz",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/192/horse-racing.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://img.icons8.com/color/512/horse-racing.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "display": "standalone",
+  "orientation": "portrait"
+}

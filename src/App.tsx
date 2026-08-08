@@ -260,8 +260,9 @@ export default function App() {
     try {
       const res = await fetch(`/api/bulletins/${encodeURIComponent(hipodrom)}`);
       if (res.ok) {
-        const data = await res.json();
-        if (data.content) {
+        let data: any = {};
+        try { data = await res.json(); } catch (e) {}
+        if (data && data.content) {
           setSavedBulletinContent(data.content);
           try { localStorage.setItem(`cached_bulletin_${hipodrom}`, data.content); } catch (e) {}
           return;
@@ -281,8 +282,9 @@ export default function App() {
     try {
       const res = await fetch(`/api/bulletins/${encodeURIComponent(hipodrom)}`);
       if (res.ok) {
-        const data = await res.json();
-        if (data.content) {
+        let data: any = {};
+        try { data = await res.json(); } catch (e) {}
+        if (data && data.content) {
           setRawBulletinText(data.content);
           try { localStorage.setItem(`cached_bulletin_${hipodrom}`, data.content); } catch (e) {}
           return;
@@ -302,7 +304,8 @@ export default function App() {
     try {
       const res = await fetch('/api/learning-events');
       if (res.ok) {
-        const data = await res.json();
+        let data: any = {};
+        try { data = await res.json(); } catch (e) {}
         setLearningEvents(data.events || []);
       }
     } catch (err) {
@@ -318,7 +321,8 @@ export default function App() {
       const url = `/api/memory?q=${encodeURIComponent(memorySearch)}&category=${encodeURIComponent(selectedCategory)}`;
       const res = await fetch(url);
       if (res.ok) {
-        const data = await res.json();
+        let data: any = {};
+        try { data = await res.json(); } catch (e) {}
         setMemoryEntries(data.notes || []);
         try { localStorage.setItem('cached_memory_notes', JSON.stringify(data.notes || [])); } catch (e) {}
       } else {
@@ -338,8 +342,11 @@ export default function App() {
     try {
       const res = await fetch('/api/db/stats');
       if (res.ok) {
-        const data = await res.json();
-        setDbStats(data);
+        let data: any = {};
+        try { data = await res.json(); } catch (e) {}
+        if (data && typeof data === 'object') {
+          setDbStats(data);
+        }
       }
     } catch (err) {
       console.error("DB stat hatası:", err);
@@ -358,7 +365,8 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hipodrom: manageHipodrom, content: rawBulletinText.trim() })
       });
-      const data = await res.json();
+      let data: any = {};
+      try { data = await res.json(); } catch (e) {}
       if (res.ok) {
         setStatusMessage({ type: 'success', text: `✅ ${manageHipodrom} bülteni kapalı devre veritabanına başarıyla kaydedildi.` });
         try { localStorage.setItem(`cached_bulletin_${manageHipodrom}`, rawBulletinText.trim()); } catch (e) {}
@@ -407,7 +415,8 @@ export default function App() {
         })
       });
 
-      const data = await res.json();
+      let data: any = {};
+      try { data = await res.json(); } catch (e) {}
 
       if (res.ok) {
         if (!data.races || data.races.length === 0) {
@@ -441,13 +450,16 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageName: nameToUse })
       });
-      const data = await res.json();
-      if (res.ok) {
+      let data: any = {};
+      try { data = await res.json(); } catch (e) {}
+      if (res.ok && data.text) {
         setOcrText(data.text);
         setRawBulletinText(data.text);
         setCustomBulletinInput(data.text);
         setNewContent(data.text);
         setStatusMessage({ type: 'success', text: '✅ Metin / OCR taraması bültenden başarıyla çıkarıldı ve alana yerleştirildi!' });
+      } else {
+        setStatusMessage({ type: 'error', text: data.error || 'Görsel okunamadı veya metin bulunamadı.' });
       }
     } catch (err) {
       setStatusMessage({ type: 'error', text: 'Görsel veya metin tarama hatası.' });
