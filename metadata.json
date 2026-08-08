@@ -1,0 +1,6 @@
+{
+  "name": "TURBO-10X PRO",
+  "description": "Yapay Zeka Destekli At Yarışı Analiz ve Bülten Yönetim Sistemi",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
