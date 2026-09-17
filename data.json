@@ -3178,8 +3178,8 @@
       "sire": "MARCAVELLY (USA)"
     },
     "NOBLE KNIGHT": {
-      "dam": "KING",
-      "sire": "KNIGHT"
+      "sire": "KNIGHT",
+      "dam": "KING"
     },
     "DARK GLORY": {
       "sire": "SADLER'S JOY (USA)",
@@ -3222,8 +3222,8 @@
       "sire": "TOROK"
     },
     "ANATOLIAN TIGER": {
-      "dam": "MENDIP",
-      "sire": "TIGER"
+      "sire": "TIGER",
+      "dam": "MENDIP"
     },
     "THUNDER BOLT": {
       "dam": "ROYAL LADY",
@@ -3238,8 +3238,8 @@
       "sire": "KAFKAS SAHI"
     },
     "IRON HORSE": {
-      "dam": "TOROK",
-      "sire": "HORSE"
+      "sire": "HORSE",
+      "dam": "TOROK"
     },
     "ZIP ZIP OMER": {
       "sire": "DILIRAN",
@@ -3330,8 +3330,8 @@
       "dam": "GOLDEN NIGHT"
     },
     "ROCKET MAN": {
-      "dam": "DAREDEVIL",
-      "sire": "MAN"
+      "sire": "MAN",
+      "dam": "DAREDEVIL"
     },
     "YURTKURAN": {
       "sire": "AYABAKAN",
@@ -3458,8 +3458,8 @@
       "dam": "HARD BABY"
     },
     "GOLDEN BULLET": {
-      "dam": "TOROK",
-      "sire": "BULLET"
+      "sire": "BULLET",
+      "dam": "TOROK"
     },
     "GECILMEZ ALTUN": {
       "sire": "DEMIRDOVEN",
@@ -3590,8 +3590,8 @@
       "sire": "NATIVE KHAN"
     },
     "GOLDEN DRAGON": {
-      "dam": "FAST",
-      "sire": "DRAGON"
+      "sire": "DRAGON",
+      "dam": "FAST"
     },
     "OZCANBEY": {
       "dam": "ROYAL LADY",
@@ -3614,8 +3614,8 @@
       "sire": "DEMIRDOVEN"
     },
     "DEMIRAT": {
-      "dam": "ALTAHA",
-      "sire": "DEMIRAT"
+      "sire": "DEMIRAT",
+      "dam": "ALTAHA"
     },
     "CANYAMAN": {
       "dam": "GULPERISI",
@@ -3650,8 +3650,8 @@
       "dam": "GHOST MOUNTAIN"
     },
     "RIVER DANCE": {
-      "dam": "NATIVE",
-      "sire": "DANCE"
+      "sire": "DANCE",
+      "dam": "NATIVE"
     },
     "OTAY": {
       "sire": "YILMABASAR",
@@ -3714,8 +3714,8 @@
       "sire": "KAIZBERT"
     },
     "WIND DANCER": {
-      "dam": "TOROK",
-      "sire": "DANCER"
+      "sire": "DANCER",
+      "dam": "TOROK"
     },
     "OTAY 3Y A E YILMABASAR": {
       "dam": "BUDAPESTELI",
@@ -3878,8 +3878,8 @@
       "dam": "SARIÇİÇEK"
     },
     "FIRE STORM": {
-      "dam": "KAIZBERT",
-      "sire": "STORM"
+      "sire": "STORM",
+      "dam": "KAIZBERT"
     },
     "DOMANIC KAPLANI 3Y E FIRIKYA": {
       "sire": "FIRIKYA",
