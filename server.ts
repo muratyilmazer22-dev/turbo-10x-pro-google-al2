@@ -2039,7 +2039,7 @@ const CITY_TRACK_DNA_MAP: Record<string, {
   "PARISLONGCHAMP": {
     city: "PARISLONGCHAMP",
     hipodromName: "Hippodrome de ParisLongchamp (Fransa)",
-    trackType: "Büyük Çim & Tepe İnişi (Fausse Ligne Taktiksel Viraj)",
+    trackType: "Büyük Çim & Tepe İni��i (Fausse Ligne Taktiksel Viraj)",
     characteristics: "Longchamp'ın tepeden inişi ve 'fausse ligne' yalancı düzlüğü jokey ustalığı ve nefes dağılımı ister. Erken yürüyenler son 200m'de çöker; FRANKEL, SEA THE STARS ve GALILEO hatları zaferi belirler.",
     winningSires: [
       { name: "SEA THE STARS", powerBonus: 5.2, winRate: "%43.5", specialty: "Longchamp tepe inişi ve son 400m staminası" },
@@ -10163,7 +10163,7 @@ app.post('/api/ai/chat', async (req, res) => {
         `• **Kardeş Sinyali:** ${pedDna.siblingSignal}\n` +
         `• **En Uygun Mesafe:** ${pedDna.optimalDistance}\n` +
         `• **En Uygun Pist:** ${pedDna.optimalTrack}\n` +
-        `• **Pedigri Skoru:** ${pedDna.pedigreeScore} / 100\n` +
+        `�� **Pedigri Skoru:** ${pedDna.pedigreeScore} / 100\n` +
         `• **Pedigri Güveni:** ${pedDna.pedigreeConfidence}\n` +
         (pedDna.bloodlineConflict ? `• ${pedDna.bloodlineConflict}\n` : '') +
         `• *${pedDna.ruleApplied}*\n\n` +
@@ -11342,15 +11342,15 @@ app.post('/api/ai/chat', async (req, res) => {
     if (targetProgram.includes("1. Altılı") || targetProgram.includes("Birinci") || targetProgram.includes("BIRINCI") || normMsg.includes("1. ALTILI") || normMsg.includes("BIRINCI ALTILI") || normMsg.includes("1.ALTILI")) {
       const bEntry = db.bulletins[dateKey];
       if (!storedRaces.some(r => Number(r.raceNo) === 1)) {
-        if ((bEntry as any)?.allRaces && (bEntry as any).allRaces.some((r: any) => Number(r.raceNo) === 1)) {
+        if (!hasFreshBulletinInput && (bEntry as any)?.allRaces && (bEntry as any).allRaces.some((r: any) => Number(r.raceNo) === 1)) {
           storedRaces = (bEntry as any).allRaces;
-        } else if (officialBulletin && officialBulletin.length > 80) {
+        } else if (!hasFreshBulletinInput && officialBulletin && officialBulletin.length > 80) {
           const fullParsed = parseRaces(officialBulletin, "1. Altılı Ganyan", undefined, targetHipodrom);
           if (fullParsed.allRaces && fullParsed.allRaces.some((r: any) => Number(r.raceNo) === 1)) {
             storedRaces = fullParsed.allRaces;
           }
         }
-        if (!storedRaces.some(r => Number(r.raceNo) === 1)) {
+        if (!hasFreshBulletinInput && !storedRaces.some(r => Number(r.raceNo) === 1)) {
           const dynamicContent = generateDynamicTjkBulletin(targetHipodrom, targetDate);
           const fullParsed = parseRaces(dynamicContent, "1. Altılı Ganyan", undefined, targetHipodrom);
           if (fullParsed.allRaces && fullParsed.allRaces.some((r: any) => Number(r.raceNo) === 1)) {
@@ -11364,6 +11364,31 @@ app.post('/api/ai/chat', async (req, res) => {
           }
         }
       }
+    }
+
+    if (hasFreshBulletinInput) {
+      const freshSourceNorm = normalizeText(userMessage);
+      const sourceBoundRaces = storedRaces
+        .map((race: any) => ({
+          ...race,
+          horses: (race.horses || []).filter((horse: any) => {
+            const name = normalizeText(String(horse.name || ''));
+            return name.length >= 3 && freshSourceNorm.includes(name);
+          })
+        }))
+        .filter((race: any) => race.horses.length > 0);
+      const isSixLegRequest = /altılı|altisi|altılı/.test(normalizeText(targetProgram)) || /altılı|altisi|altılı/.test(normalizeText(userMessage));
+      if (sourceBoundRaces.length === 0 || (isSixLegRequest && sourceBoundRaces.length < 6)) {
+        return res.json({
+          success: false,
+          reply: `🛡️ **EKSİK VERİ — ANALİZ DURDURULDU**\\n\\nYeni bültendeki koşu ve safkanlar kaynak metinle doğrulanamadı. Eski hafıza veya örnek veri kullanılmadı; kupon üretilmedi.`,
+          races: [],
+          hipodrom: targetHipodrom,
+          detectedHipodrom: targetHipodrom,
+          ticketPlan: null
+        });
+      }
+      storedRaces = sourceBoundRaces;
     }
 
     // Conversely, if targetProgram is 2. Altılı Ganyan and storedRaces only contains early races, reload full bulletin
