@@ -1300,7 +1300,13 @@ app.post('/api/db/import', (req, res) => {
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        // Google AI Studio yeniden başlatmalarında eski HMR soketi portu
+        // kilitli bırakabildiği için sunucu tarafı Vite HMR'ını kapatıyoruz.
+        hmr: false,
+        watch: null,
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);
