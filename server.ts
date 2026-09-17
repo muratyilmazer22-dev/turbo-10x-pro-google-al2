@@ -673,6 +673,18 @@ function isValidHorseName(cleanName: string): boolean {
   return true;
 }
 
+// Altılı türünü tek bir kuralla çözümle: açıkça 1. altılı denmedikçe 2. altılı.
+function resolveSixGameProgram(programInput: unknown): { programType: string; startRaceNum: number } {
+  const normalized = normalizeText(typeof programInput === "string" ? programInput : "");
+  const firstSixPattern = /(?:^|\s)(?:1(?:\s*[.]\s*)?|BIRINCI|ILK)(?:\s+ALTILI)?(?:\s+GANYAN)?(?:\s|$)/;
+
+  if (firstSixPattern.test(normalized) || normalized.includes("1 ALTILI") || normalized.includes("ILK ALTILI") || normalized.includes("BIRINCI ALTILI")) {
+    return { programType: "1. Altılı Ganyan", startRaceNum: 1 };
+  }
+
+  return { programType: "2. Altılı Ganyan", startRaceNum: 2 };
+}
+
 // Race Parsing Engine
 function parseRaces(bulletinText: string, oyunProgrami: string) {
   if (!bulletinText || !bulletinText.trim()) {
@@ -833,8 +845,9 @@ function parseRaces(bulletinText: string, oyunProgrami: string) {
   saveDB(db);
 
   const totalRacesFound = races.length;
-  let startRaceNum = 1;
-  if (oyunProgrami.includes("2.")) {
+  const resolvedProgram = resolveSixGameProgram(oyunProgrami);
+  let startRaceNum = resolvedProgram.startRaceNum;
+  if (resolvedProgram.programType === "2. Altılı Ganyan") {
     if (totalRacesFound >= 9) startRaceNum = 4;
     else if (totalRacesFound === 8) startRaceNum = 3;
     else if (totalRacesFound === 7) startRaceNum = 2;
@@ -911,7 +924,8 @@ app.post('/api/analyze', (req, res) => {
     return res.status(400).json({ error: "Lütfen analiz edilecek bülten metnini girin." });
   }
 
-  const { selectedRaces, startRaceNum, totalRacesFound } = parseRaces(bulletinText, oyunProgrami || "1. Altılı Ganyan");
+  const resolvedProgram = resolveSixGameProgram(oyunProgrami);
+  const { selectedRaces, startRaceNum, totalRacesFound } = parseRaces(bulletinText, resolvedProgram.programType);
 
   const raceResults = selectedRaces.map((race, raceIdx) => {
     const currentRaceNo = startRaceNum + raceIdx;
@@ -996,7 +1010,7 @@ app.post('/api/analyze', (req, res) => {
     startRaceNum,
     totalRacesFound,
     hipodrom: hipodrom || "GENEL",
-    programType: oyunProgrami || "1. Altılı Ganyan",
+    programType: resolvedProgram.programType,
     aiOverview: {
       engineVersion: "v3.5 Next-Gen 20-Parameter Engine",
       totalMemoryMatches: totalMemoryMatchesCount,
