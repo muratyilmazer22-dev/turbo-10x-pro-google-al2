@@ -1,11 +1,18 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
+import {defineConfig, type IndexHtmlTransformResult} from 'vite';
+
+const disableHostedHmrClient = {
+  name: 'disable-hosted-hmr-client',
+  transformIndexHtml(html: string): IndexHtmlTransformResult {
+    return html.replace(/<script[^>]+src=["']\/?@vite\/client["'][^>]*><\/script>/g, '');
+  },
+};
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), disableHostedHmrClient],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
