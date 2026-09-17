@@ -207,6 +207,24 @@ export class ConversationalHybridBridge {
   /**
    * 2. Sohbet & Kurgu API Kontrolcüsü (Google Gemini 2.5 Pro / Flash)
    */
+  private static buildMissingBulletinPlan(intent: UserParsedIntent, message: string): GeneratedTicketPlan {
+    return {
+      hipodrom: intent.targetHipodrom,
+      ticketTitle: `${intent.targetHipodrom} ${intent.ticketType} — Eksik Veri`,
+      requestedBudgetTL: intent.budgetTL,
+      calculatedCostTL: 0,
+      unitPriceTL: 1.25,
+      totalCombinations: 0,
+      legs: [],
+      overallExpectedValue: 0,
+      bankoCandidates: [],
+      highValueSurprises: [],
+      expertSummaryCommentary: `Eksik Veri Tespiti: ${message} Resmi bülten olmadan tahmin üretilmedi.`,
+      engineUsed: 'LOCAL_DETERMINISTIC_AHP',
+      timestamp: new Date().toISOString()
+    };
+  }
+
   public static async generateConversationalTicket(prompt: string): Promise<GeneratedTicketPlan> {
     const intent = this.parseUserPrompt(prompt);
     console.log(`[ConversationalBridge] Talep Alındı: ${intent.targetHipodrom} | ${intent.ticketType} | ${intent.budgetTL} TL`);
@@ -220,7 +238,7 @@ export class ConversationalHybridBridge {
       );
       bulletin = await Promise.race([fetchPromise, timeoutPromise]);
     } catch (e) {
-      bulletin = TjkScraper.generateStructuredMockBulletin(intent.targetHipodrom, new Date().toISOString().split('T')[0]);
+      return this.buildMissingBulletinPlan(intent, 'Güncel bülten alınamadı; analiz ve kupon üretimi durduruldu.');
     }
 
     // 2. Altılı Ayaklarını Belirle (1. Altılı vs 2. Altılı vs 5'li Ganyan)
@@ -246,11 +264,8 @@ export class ConversationalHybridBridge {
       availableRaces = totalRaces >= 6 ? bulletin.races.slice(0, 6) : bulletin.races;
     }
 
-    if (availableRaces.length === 0) {
-      const fallbackBulletin = TjkScraper.generateStructuredMockBulletin(intent.targetHipodrom, new Date().toISOString().split('T')[0]);
-      availableRaces = intent.ticketType === '2. Altılı' && fallbackBulletin.races.length >= 6 
-        ? fallbackBulletin.races.slice(-6) 
-        : fallbackBulletin.races.slice(0, 6);
+    if (availableRaces.length < 6 && (intent.ticketType === '1. Altılı' || intent.ticketType === '2. Altılı')) {
+      return this.buildMissingBulletinPlan(intent, `Altılı için 6 doğrulanmış ayak gerekir; yalnızca ${availableRaces.length} ayak bulundu.`);
     }
 
     // 3. Her Ayak İçin DataMapper & QuantitativeRiskEngine ile EV Değerlerini Hesapla
@@ -419,13 +434,13 @@ Prensipler:
         const rawHorses = (r.horses && Array.isArray(r.horses)) ? r.horses : [];
         if (rawHorses.length === 0) return;
         const rankedRunners = rawHorses.map((h: any, hIdx: number) => {
-          const horseName = h.horseName || h.name || `AT ${hIdx + 1}`;
-          const jockeyName = h.jockeyName || h.jockey || 'Bilinmiyor';
-          const horseNum = h.no || h.num || h.horseNo || String(hIdx + 1);
-          const agfVal = parseFloat(h.agf || h.agfPercent || '0') || 0;
-          const hpVal = parseFloat(h.hp || h.handicap || '0') || 0;
-          const oddsVal = parseFloat(h.odds || h.marketOdds || '0') || 0;
-          const weightVal = parseFloat(String(h.weight || '56')) || 56;
+          const horseName = String(h.horseName || h.name || '').trim();
+          const jockeyName = String(h.jockeyName || h.jockey || '').trim();
+          const horseNum = String(h.no || h.num || h.horseNo || '').trim();
+          const agfVal = Number.isFinite(Number(h.agf || h.agfPercent)) ? Number(h.agf || h.agfPercent) : 0;
+          const hpVal = Number.isFinite(Number(h.hp || h.handicap)) ? Number(h.hp || h.handicap) : 0;
+          const oddsVal = Number.isFinite(Number(h.odds || h.marketOdds)) ? Number(h.odds || h.marketOdds) : 0;
+          const weightVal = Number.isFinite(Number(h.weight)) ? Number(h.weight) : 0;
           const isTopJockey = topJockeys.some(tj => jockeyName.toUpperCase().includes(tj.replace(/[^A-ZÇĞİÖŞÜ]/g, '')));
 
           // 🚀 Multi-parameter quantitative scoring with Trakus Early Pace & Sector Sprint (+30% Weight)
@@ -462,16 +477,18 @@ Prensipler:
             no: horseNum,
             name: horseName,
             jockey: jockeyName,
-            marketOdds: oddsVal > 0 ? oddsVal : (3.0 + hIdx),
+            marketOdds: oddsVal,
             trueProbability: trueProb,
-            expectedValueEV: ev,
-            isValueBet: ev >= 1.15,
+            expectedValueEV: oddsVal > 1 ? ev : 0,
+            isValueBet: oddsVal > 1 && ev >= 1.15,
             score,
             aiInsight
           };
         });
 
-        rankedRunners.sort((a: any, b: any) => b.score - a.score);
+        const verifiedRunners = rankedRunners.filter((runner: any) => runner.no && runner.name && runner.jockey);
+        if (verifiedRunners.length === 0) return;
+        verifiedRunners.sort((a: any, b: any) => b.score - a.score);
 
         finalAnalyzedLegs.push({
           raceNumber: r.raceNo || (rIdx + startIdx + 1),
@@ -483,49 +500,14 @@ Prensipler:
             paceScenario: 'Moderate',
             bestValueBets: [],
             topAhpPicks: [],
-            rankedRunners
+            rankedRunners: verifiedRunners
           } as any
         });
       });
     }
 
-    // Ensure we have legs only if no customRaces were provided at all
-    if (finalAnalyzedLegs.length === 0 && (!customRaces || customRaces.length === 0)) {
-      const mockBulletin = TjkScraper.generateStructuredMockBulletin(intent.targetHipodrom, new Date().toISOString().split('T')[0]);
-      const availableMockRaces = intent.ticketType === '2. Altılı' && mockBulletin.races.length >= 6
-        ? mockBulletin.races.slice(-6)
-        : mockBulletin.races.slice(0, 6);
-
-      availableMockRaces.forEach((race: any, legIdx: number) => {
-        const assignedRaceNumber = intent.ticketType === '2. Altılı'
-          ? (legIdx + 4)
-          : (legIdx + 1);
-
-        const rawHorses = (race.horses && race.horses.length > 0) ? race.horses : [];
-        finalAnalyzedLegs.push({
-          raceNumber: assignedRaceNumber,
-          distance: race.distance || 1400,
-          surface: race.surface || 'Kum',
-          quantResult: {
-            raceId: `race_${assignedRaceNumber}`,
-            overallRaceRisk: 'Moderate',
-            paceScenario: 'Moderate',
-            bestValueBets: [],
-            topAhpPicks: [],
-            rankedRunners: rawHorses.map((h: any, hIdx: number) => ({
-              no: String(h.horseNo || h.no || h.num || (hIdx + 1)).trim(),
-              name: String(h.horseName || h.name || `AT ${hIdx + 1}`).trim().toUpperCase(),
-              jockey: String(h.jockeyName || h.jockey || 'Bilinmiyor').trim(),
-              marketOdds: parseFloat(String(h.marketOdds || h.odds || '0')) || (3.0 + hIdx),
-              trueProbability: hIdx === 0 ? 0.38 : (hIdx === 1 ? 0.25 : 0.15),
-              expectedValueEV: hIdx === 0 ? 1.35 : 1.15,
-              isValueBet: true,
-              score: 80 - (hIdx * 10),
-              aiInsight: hIdx === 0 ? 'Grup içinde en yüksek form puanına ve sprint gücüne sahip.' : 'Mesafe ve jokey uyumuyla sağlam alternatif.'
-            }))
-          } as any
-        });
-      });
+    if (finalAnalyzedLegs.length === 0) {
+      return this.buildMissingBulletinPlan(intent, 'Doğrulanmış koşu verisi bulunamadı.');
     }
 
     const numEvaluatedLegs = finalAnalyzedLegs.slice(0, 6).length;

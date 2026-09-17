@@ -4326,7 +4326,7 @@ function generateDynamicTjkBulletin(hipodromName: string, dateStr?: string): str
 5 - WOLF WOMEN (54kg 2y a d SK M.M.BİLGİN) [%10 AGF]
 
 9. KOŞU - 17:30 - 3 Yaşlı İngilizler, Maiden - 1400m Çim
-1 - BABA ZÜLKÜF (58kg 3y d e DB SK K.TOKAÇOĞLU) [%14 AGF]
+1 - BABA ZÜLKÜF (58kg 3y d e DB SK K.TOKA��OĞLU) [%14 AGF]
 2 - BEYOND LIMITS (58kg 3y d e KG SK N.AVCİ) [%18 AGF]
 3 - GRAND CHAMPION (58kg 3y a e SK M.KAYA) [%25 AGF]
 4 - LUCKY RUNNER (58kg 3y d e DB S.ÖZEN) [%8 AGF]
@@ -4610,7 +4610,7 @@ function determineGameStartRaceAndLegs(
 function parseRaces(bulletinText: string, oyunProgrami: string, customStartRace?: number, hipodrom?: string) {
   let textToParse = bulletinText;
   if (!textToParse || !textToParse.trim()) {
-    textToParse = TODAYS_ACTUAL_TJK_BULLETIN_TEXT;
+    return { selectedRaces: [], allRaces: [], startRaceNum: 1, totalRacesFound: 0 };
   }
 
   const lines = preprocessBulletinLines(textToParse);
@@ -5223,16 +5223,10 @@ async function parseRacesAsync(bulletinText: string, oyunProgrami: string, custo
   let races: InternalRace[] | null = null;
   const isCustomUserPaste = bulletinText.trim() !== TODAYS_ACTUAL_TJK_BULLETIN_TEXT.trim();
 
-  // 1. For custom pasted text, try Gemini AI parser first if API key is available
-  if (process.env.GEMINI_API_KEY && isCustomUserPaste && bulletinText.length > 50) {
-    try {
-      races = await parseRacesWithGemini(bulletinText);
-    } catch (err) {
-      console.warn("Gemini parsing fallback triggered:", err);
-    }
-  }
+  // User-pasted bulletins are parsed deterministically first. AI may explain verified
+  // fields later, but it is never allowed to invent runners during extraction.
 
-  // 2. If Gemini didn't return valid races, use the upgraded deterministic block parser
+  // 1. Use the deterministic block parser for the exact pasted source text.
   if (!races || races.length === 0) {
     const localRes = parseRaces(bulletinText, oyunProgrami, customStartRace, hipodrom);
     races = localRes.allRaces && localRes.allRaces.length > 0 ? localRes.allRaces : null;
@@ -5243,10 +5237,15 @@ async function parseRacesAsync(bulletinText: string, oyunProgrami: string, custo
     return { selectedRaces: [], allRaces: [], startRaceNum: 1, totalRacesFound: 0 };
   }
 
-  // 4. Sanitize every race to guarantee zero hallucinations and strictly genuine horses
+  // 2. Sanitize every race and require every runner name to exist in the exact source text.
+  // This is the hard no-hallucination boundary for pasted bulletins.
+  const sourceNorm = normalizeText(bulletinText);
   const sanitizedRaces: InternalRace[] = [];
   for (const r of races) {
-    const validHorses = sanitizeAndDeduplicateRaceHorses(r.horses || []);
+    const validHorses = sanitizeAndDeduplicateRaceHorses(r.horses || []).filter((horse: any) => {
+      const horseNorm = normalizeText(String(horse.name || ''));
+      return horseNorm.length >= 3 && sourceNorm.includes(horseNorm);
+    });
     if (validHorses.length > 0) {
       sanitizedRaces.push({
         ...r,
@@ -10941,6 +10940,7 @@ app.post('/api/ai/chat', async (req, res) => {
       ((userMessage.length > 150 && hasRacePointers))
     );
 
+    const hasFreshBulletinInput = hasRaceLinesInMsg || uploadedImages.length > 0;
     const isBulletinUpload = Boolean(
       hasIncomingBulletin &&
       !isExplicitTicketRequest &&
@@ -10954,7 +10954,7 @@ app.post('/api/ai/chat', async (req, res) => {
     if (isBulletinUpload) {
       let activeRaces: InternalRace[] = extractedRealRaces.length > 0
         ? extractedRealRaces
-        : (incomingUserRaces.length > 0 ? incomingUserRaces : (db.bulletins[dateKey] as any)?.races || []);
+        : (incomingUserRaces.length > 0 ? incomingUserRaces : (!hasFreshBulletinInput ? (db.bulletins[dateKey] as any)?.races || [] : []));
 
       if (activeRaces.length === 0 && userMessage.length > 100) {
         try {
@@ -10978,6 +10978,17 @@ app.post('/api/ai/chat', async (req, res) => {
         ...r,
         horses: sanitizeAndDeduplicateRaceHorses(r.horses)
       }));
+
+      if (activeRaces.length === 0) {
+        return res.json({
+          success: false,
+          reply: `🛡️ **EKSİK VERİ — ANALİZ DURDURULDU**\n\nGönderilen metinden doğrulanmış koşu ve safkan çıkarılamadı. Eski hafıza veya örnek veri kullanılmadı; mevcut hafıza korunuyor. Lütfen resmi bülteni satır satır veya görsel olarak yeniden ilet.`,
+          races: [],
+          hipodrom: targetHipodrom,
+          detectedHipodrom: targetHipodrom,
+          ticketPlan: null
+        });
+      }
 
       // Store in memory database
       db.bulletins[dateKey] = {
@@ -11176,26 +11187,26 @@ app.post('/api/ai/chat', async (req, res) => {
     // ============================================================================
     // 🎯 CASE 3: EXPLICIT TICKET REQUEST OR DEEP GEMINI / LOCAL AHP CALL
     // ============================================================================
-    let storedRaces: InternalRace[] = [];
+  let storedRaces: InternalRace[] = [];
 
-    const clientCurrentRaces = Array.isArray(req.body?.currentRaces) ? req.body.currentRaces : [];
+  const clientCurrentRaces = Array.isArray(req.body?.currentRaces) ? req.body.currentRaces : [];
 
-    if (extractedRealRaces && extractedRealRaces.length > 0) {
+  if (extractedRealRaces && extractedRealRaces.length > 0) {
       storedRaces = extractedRealRaces;
     } else if (incomingUserRaces && incomingUserRaces.length > 0) {
       storedRaces = incomingUserRaces;
-    } else if (clientCurrentRaces.length > 0 && targetProgram.includes("1. Altılı") && clientCurrentRaces.some((r: any) => Number(r.raceNo) === 1)) {
+    } else if (!hasFreshBulletinInput && clientCurrentRaces.length > 0 && targetProgram.includes("1. Altılı") && clientCurrentRaces.some((r: any) => Number(r.raceNo) === 1)) {
       storedRaces = clientCurrentRaces.map((r: any, idx: number) => ({
         raceNo: Number(r.raceNo) || (idx + 1),
         title: r.title || `${idx + 1}. Koşu`,
         condition: r.condition || 'Genel Şartlı',
         horses: sanitizeAndDeduplicateRaceHorses(r.horses || [])
       })).filter(r => r.horses.length > 0);
-    } else if ((db.bulletins[dateKey] as any)?.allRaces && (db.bulletins[dateKey] as any).allRaces.length > 0) {
+    } else if (!hasFreshBulletinInput && (db.bulletins[dateKey] as any)?.allRaces && (db.bulletins[dateKey] as any).allRaces.length > 0) {
       storedRaces = (db.bulletins[dateKey] as any).allRaces;
-    } else if ((db.bulletins[dateKey] as any)?.races && (db.bulletins[dateKey] as any).races.length > 0) {
+    } else if (!hasFreshBulletinInput && (db.bulletins[dateKey] as any)?.races && (db.bulletins[dateKey] as any).races.length > 0) {
       storedRaces = (db.bulletins[dateKey] as any).races;
-    } else if ((db.bulletins[dateKey] as any)?.content && typeof (db.bulletins[dateKey] as any).content === 'string') {
+    } else if (!hasFreshBulletinInput && (db.bulletins[dateKey] as any)?.content && typeof (db.bulletins[dateKey] as any).content === 'string') {
       try {
         const parsedResult = parseRaces((db.bulletins[dateKey] as any).content, targetProgram, undefined, targetHipodrom);
         if (parsedResult && parsedResult.allRaces && parsedResult.allRaces.length > 0) {
@@ -11212,7 +11223,7 @@ app.post('/api/ai/chat', async (req, res) => {
     }
 
     // Fallback to clientCurrentRaces if storedRaces is still empty
-    if (storedRaces.length === 0 && clientCurrentRaces.length > 0) {
+    if (!hasFreshBulletinInput && storedRaces.length === 0 && clientCurrentRaces.length > 0) {
       storedRaces = clientCurrentRaces.map((r: any, idx: number) => ({
         raceNo: Number(r.raceNo) || (idx + 1),
         title: r.title || `${idx + 1}. Koşu`,
@@ -11293,31 +11304,6 @@ app.post('/api/ai/chat', async (req, res) => {
             }
           }
         }
-      }
-    }
-
-    if (storedRaces.length === 0) {
-      try {
-        const dynamicContent = generateDynamicTjkBulletin(targetHipodrom, targetDate);
-        if (dynamicContent && dynamicContent.length > 100) {
-          const parsedResult = parseRaces(dynamicContent, targetProgram, undefined, targetHipodrom);
-          if (parsedResult && parsedResult.allRaces && parsedResult.allRaces.length > 0) {
-            storedRaces = parsedResult.allRaces.map(r => ({
-              ...r,
-              horses: sanitizeAndDeduplicateRaceHorses(r.horses)
-            }));
-            officialBulletin = dynamicContent;
-            db.bulletins[dateKey] = {
-              content: dynamicContent,
-              races: parsedResult.selectedRaces as any,
-              allRaces: storedRaces as any,
-              updated_at: new Date().toISOString()
-            };
-            saveDB(db);
-          }
-        }
-      } catch (genErr) {
-        console.warn("Dynamic bulletin generation fallback failed:", genErr);
       }
     }
 
@@ -11415,7 +11401,7 @@ app.post('/api/ai/chat', async (req, res) => {
             success: true,
             reply: `⚠️ **[EKSİK VERİ TESPİTİ — 2. ALTILI GANYAN BÜLTENİ EKSİK]**\n\n` +
               `Ustam, sistem hafızasında yalnızca **${targetHipodrom}** hipodromunun 1. Altılı Ganyan'ına ait **1-6. Koşular** kayıtlıdır.\n\n` +
-              `📌 **Sıfır Tolerans & Sıfır Halüsinasyon Protokolü:** Sistem kurallarımız gereği bültende yer almayan hiçbir hayali safkanla kurgu üretilemez.\n\n` +
+              `📌 **Sıf��r Tolerans & Sıfır Halüsinasyon Protokolü:** Sistem kurallarımız gereği bültende yer almayan hiçbir hayali safkanla kurgu üretilemez.\n\n` +
               `2. Altılı Ganyan için kalan koşuların (${targetHipodrom} programının son 6 koşusu) bülten metnini veya ekran görüntüsünü paylaşırsanız, gerçek safkanlar, jokeyler ve AGF oranlarıyla **${activeTargetBudget} TL** bütçenize tam uyan kurguyu anında oluşturayım.`,
             hipodrom: targetHipodrom,
             programType: targetProgram,
@@ -12518,7 +12504,7 @@ app.post('/api/ai/chat', async (req, res) => {
           `  • **Baba:** ${ped.sire}\n` +
           `  • **Anne:** ${ped.dam}\n` +
           `  • **Anne-Baba:** ${ped.damSire}\n` +
-          `  • **Baba Hattı:** ${ped.sireLine}\n` +
+          `  ��� **Baba Hattı:** ${ped.sireLine}\n` +
           `  • **Anne Hattı:** ${ped.damLine}\n` +
           `  • **Kardeş Sinyali:** ${ped.siblingSignal}\n` +
           `  • **En Uygun Mesafe:** ${ped.optimalDistance}\n` +
@@ -12562,7 +12548,7 @@ app.post('/api/ai/chat', async (req, res) => {
         `🥈 **2. ALTILI GANYAN:** ${ticketProg2.totalCalculatedCost} TL (${ticketProg2.totalCalculatedKomb} Kombinasyon) | Kalite Skoru: %${ticketProg2.dynamicRealScore} | Kazanma: %${ticketProg2.dynamicWinPercentage}\n\n` +
         `════════════════════════════════════════════════════\n\n` +
         renderTicketFullResponse(ticketProg1) +
-        `\n\n════════════════════════════════════════════════════\n\n` +
+        `\n\n═══════════���════════════════════════════════════════\n\n` +
         renderTicketFullResponse(ticketProg2);
     }
     return renderTicketFullResponse(primaryTicket);

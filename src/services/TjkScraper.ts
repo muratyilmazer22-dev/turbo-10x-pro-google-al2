@@ -81,12 +81,11 @@ export class TjkScraper {
           'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7'
         }
       },
-      () => this.generateStructuredMockBulletin(hipodrom, today) as any
+      () => ''
     );
 
     if (!response.success || typeof response.data !== 'string' || response.data.trim().length < 50) {
-      console.warn(`[TjkScraper] Canlı TJK yanıt vermedi, güvenli fallback bülteni devreye alındı.`);
-      return this.generateStructuredMockBulletin(hipodrom, today);
+      throw new Error('TJK bülteni alınamadı veya yanıt doğrulanamadı.');
     }
 
     try {
@@ -100,7 +99,7 @@ export class TjkScraper {
       console.error(`[TjkScraper] HTML parse hatası: ${parseErr.message}`);
     }
 
-    return this.generateStructuredMockBulletin(hipodrom, today);
+    throw new Error('TJK bülteni ayrıştırılamadı; doğrulanmış koşu bulunamadı.');
   }
 
   /**
