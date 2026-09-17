@@ -14,6 +14,7 @@
  */
 
 import { DynamicWeightsBreakdown } from './QuantitativeRiskEngine';
+import { HistoricalRacingDatabase, LearningEventRecord } from './HistoricalRacingDatabase';
 import { GoogleGenAI } from '@google/genai';
 import { safeJsonParse } from './networkReliability';
 
@@ -194,12 +195,12 @@ export class LearningFeedbackEngine {
     lossMetrics: ReturnType<typeof this.calculateLossMetrics>
   ): Promise<string> {
     if (!process.env.GEMINI_API_KEY) {
-      return `[ÖĞRENEN SİSTEM RAPORU] ${result.hipodrom} yarışında ${result.winningHorseName} kazandı. Model sıralaması: #${prediction.runners.findIndex(r => String(r.no) === String(result.winningHorseNo)) + 1}. Brier Skoru: ${lossMetrics.brierScore}. Parametreler otomatik optimize edildi.`;
+      return `[ÖĞRENEN SİSTEM RAPORU] ${result.hipodrom} yarışında ${result.winningHorseName} kazandı. Model sıralaması: #${prediction.runners.findIndex(r => String(r.no) === String(result.winningHorseNo)) + 1}. Brier Skoru: ${lossMetrics.brierScore}. Ağırlık değişikliği doğrulama eşiği olmadan uygulanmadı.`;
     }
 
     const prompt = `
 Aşağıdaki at yarışı tahmin modeli çıktısı ile gerçekleşen yarış sonucunu karşılaştır.
-"Neden yanıldık veya neden bildik?" sorusuna bir kantitatif veri analisti gözüyle 2-3 cümlelik net bir Post-Mortem öğrenme notu yaz.
+"Neden yanıldık veya neden bildik?" sorusuna bir kantitatif veri analisti gözüyle 2-3 cümlelik net bir Post-Mortem öğrenme notu yaz. Yalnızca verilen tahmin ve sonuç verilerini kullan; veri yoksa VERİ YOK de. Yeni at, oran, ölçüm veya neden uydurma. Ağırlık değişikliği emretme; yalnızca test edilebilir bir hipotez ve belirsizlik notu üret.
 
 Yarış: ${result.hipodrom} ${result.distance}m (${result.surface})
 Kazanan At: ${result.winningHorseName} (No: ${result.winningHorseNo}, Ganyan: ${result.winningMarketOdds})
@@ -261,6 +262,50 @@ Cevabını doğrudan Türkçe kısa analiz paragrafı olarak döndür.
     );
 
     const aiPostMortemAnalysis = await this.generateAiPostMortem(prediction, result, lossMetrics);
+    const database = HistoricalRacingDatabase.getInstance();
+    const priorEvents = Array.from(database.learningEvents.values()).filter(
+      (event) => event.hipodrom === result.hipodrom && event.modelVersionUsed === 'feedback-v1'
+    );
+    const isLoss = !wasWinnerTopPick || modelRankOfWinner > 1;
+    const countermeasureApplied = isLoss
+      ? (priorEvents.length >= 5
+        ? 'Önerilen ağırlıklar yalnızca benzer koşullarda ve sınırlı güncelleme ile uygulanacak.'
+        : 'Öğrenme kaydı oluşturuldu; 5 doğrulanmış örnek oluşmadan ağırlık değiştirilmeyecek.')
+      : 'Kazanan doğru sınıflandırıldı; ağırlık değişikliği uygulanmadı.';
+
+    const eventTimestamp = new Date().toISOString();
+    const learningEvent: LearningEventRecord = {
+      id: `learning-${result.raceId}-${Date.now()}`,
+      timestamp: eventTimestamp,
+      source: 'MODEL_ENGINE',
+      confidenceLevel: 'Medium',
+      updatedAt: eventTimestamp,
+      eventId: `learning-${result.raceId}-${Date.now()}`,
+      raceId: result.raceId,
+      date: new Date().toISOString(),
+      hipodrom: result.hipodrom,
+      raceNo: Number(result.raceId.match(/\\d+$/)?.[0] ?? 0),
+      modelVersionUsed: 'feedback-v1',
+      actualWinner: result.winningHorseName,
+      actualWinnerNo: Number(result.winningHorseNo) || 0,
+      actualWinnerOdds: Number(result.winningMarketOdds) || 0,
+      modelPredictedWinner: sortedPredict[0]?.name ?? 'VERİ YOK',
+      predictedWinnerRank: modelRankOfWinner,
+      wasWinnerTop1: modelRankOfWinner === 1,
+      wasWinnerTop3: modelRankOfWinner > 0 && modelRankOfWinner <= 3,
+      wasWinnerTop4: modelRankOfWinner > 0 && modelRankOfWinner <= 4,
+      brierScore: lossMetrics.brierScore,
+      logLoss: lossMetrics.crossEntropyLoss,
+      errorAttribution: {
+        formError: 0, tempoError: 0, paceCrashError: 0, trackBiasError: 0,
+        weightError: 0, jockeyError: 0, trainerError: 0, pedigreeError: 0,
+        distanceError: 0, marketAgfError: 0, monteCarloError: 0, riskEstimationError: 0
+      },
+      primaryFailureCause: primaryErrorCause,
+      rootCauseAnalysis: aiPostMortemAnalysis,
+      countermeasureApplied
+    };
+    database.learningEvents.set(learningEvent.eventId, learningEvent);
 
     return {
       raceId: result.raceId,
