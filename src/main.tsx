@@ -12,11 +12,6 @@ import { StrictMode, Component, ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import { wakeupKeepAlive } from './services/WakeupKeepAlive';
-
-// 🚀 Otomatik Uyanma ve Canlı Tutma Kalkanını Başlat
-wakeupKeepAlive.init();
-
 // 🛡️ SİSTEM HATA KORUMA KALKANI & OTOMATİK KENDİNİ ONARMA MOTORU (TURBO SHIELD v7)
 // Yeni özellikler, veri uyuşmazlıkları veya beklenmeyen hatalarda sistemin çökmesini %100 engeller ve kendini otomatik onarır.
 
