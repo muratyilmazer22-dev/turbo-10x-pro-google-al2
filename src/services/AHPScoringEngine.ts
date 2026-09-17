@@ -8,6 +8,7 @@ export interface HorseMetrics {
   agf_puan: number;              // Tüm İşler Gemileri — geçmiş form
   kilo_etkisi: number;            // Sıklet avantajı (en önemli)
   jokey_form: number;             // Jokey güncel forma
+  jokey_tecrube: number;          // Doğrulanmış jokey start/başarı verisi
   antrenor_form: number;          // Antrenör istatistikleri
   galop_gucu: number;             // Son galop derecesi
   form_6yaris: number;            // Son 6 yarışta ortalama başarı
@@ -34,7 +35,8 @@ export function calculateDynamicAHP(
   memoryNotes: string[],
   pedigreeRating: number,
   weight: number,
-  handicap: number
+  handicap: number,
+  jockeyEvidence?: { starts?: number; wins?: number; trackWins?: number }
 ): HorseMetrics {
   
   const safeNotes = Array.isArray(memoryNotes) ? memoryNotes : [];
@@ -64,7 +66,23 @@ export function calculateDynamicAHP(
     jokey_form = 85.0;
   }
 
-  // 4. ANTRENOR FORM
+  // 4. JOKEY TECRÜBESİ — eksik veri nötr kalır, varsayılan başarı üretilmez.
+  const jockeyStarts = Number(jockeyEvidence?.starts);
+  const jockeyWins = Number(jockeyEvidence?.wins);
+  const jockeyTrackWins = Number(jockeyEvidence?.trackWins);
+  let jokey_tecrube = 50.0;
+  if (Number.isFinite(jockeyStarts) && jockeyStarts >= 0) {
+    const experienceScore = Math.min(100, 45 + Math.log10(jockeyStarts + 1) * 18);
+    const winRateScore = Number.isFinite(jockeyWins) && jockeyStarts > 0
+      ? Math.min(100, (jockeyWins / jockeyStarts) * 220)
+      : 50;
+    const trackScore = Number.isFinite(jockeyTrackWins) && jockeyStarts > 0
+      ? Math.min(100, (jockeyTrackWins / jockeyStarts) * 260)
+      : 50;
+    jokey_tecrube = Math.round(experienceScore * 0.5 + winRateScore * 0.3 + trackScore * 0.2);
+  }
+
+  // 5. ANTRENOR FORM
   let antrenor_form = 70.0;
   if (safeNotes.some(n => typeof n === "string" && n.toLowerCase().includes("antrenor"))) {
     antrenor_form = 80.0;
@@ -151,6 +169,7 @@ export function calculateDynamicAHP(
     agf_puan,
     kilo_etkisi,
     jokey_form,
+    jokey_tecrube,
     antrenor_form,
     galop_gucu,
     form_6yaris,
@@ -178,7 +197,8 @@ export function calculateWeightedAHPScore(metrics: HorseMetrics, isHandicapRace:
   const weights = {
     agf_puan: 0.12,
     kilo_etkisi: 0.10,
-    jokey_form: 0.08,
+    jokey_form: 0.07,
+    jokey_tecrube: 0.05,
     antrenor_form: 0.05,
     galop_gucu: 0.06,
     form_6yaris: 0.08,
