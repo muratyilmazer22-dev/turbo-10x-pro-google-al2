@@ -1,4 +1,5 @@
 import express from 'express';
+import { createServer as createHttpServer } from 'node:http';
 import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
@@ -1298,16 +1299,17 @@ app.post('/api/db/import', (req, res) => {
 
 // Vite Development or Production Static Serving
 async function startServer() {
+  const httpServer = createHttpServer(app);
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
-        // Google AI Studio yeniden başlatmalarında eski HMR soketi portu
-        // kilitli bırakabildiği için sunucu tarafı Vite HMR'ını kapatıyoruz.
-    hmr: false,
-      // Do not create or advertise a WebSocket server in hosted previews.
-      ws: false,
-      watch: null,
+        // Attach Vite to the existing HTTP server so it cannot create a
+        // second hosted-preview WebSocket listener on the fixed HMR port.
+        hmr: false,
+        ws: false,
+        watch: null,
       },
       appType: "spa",
     });
@@ -1320,8 +1322,8 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`🏇 TURBO-10X PRO Server running on http://0.0.0.0:${PORT}`);
+  httpServer.listen(PORT, "0.0.0.0", () => {
+    console.log(`TURBO-10X PRO Server running on http://0.0.0.0:${PORT}`);
   });
 }
 
