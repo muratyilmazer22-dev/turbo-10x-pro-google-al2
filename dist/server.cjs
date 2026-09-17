@@ -23,6 +23,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 
 // server.ts
 var import_express = __toESM(require("express"), 1);
+var import_node_http = require("node:http");
 var import_path = __toESM(require("path"), 1);
 var import_fs = __toESM(require("fs"), 1);
 var import_vite = require("vite");
@@ -1067,13 +1068,15 @@ app.post("/api/db/import", (req, res) => {
   });
 });
 async function startServer() {
+  const httpServer = (0, import_node_http.createServer)(app);
   if (process.env.NODE_ENV !== "production") {
     const vite = await (0, import_vite.createServer)({
       server: {
         middlewareMode: true,
-        // Google AI Studio yeniden başlatmalarında eski HMR soketi portu
-        // kilitli bırakabildiği için sunucu tarafı Vite HMR'ını kapatıyoruz.
+        // Attach Vite to the existing HTTP server so it cannot create a
+        // second hosted-preview WebSocket listener on the fixed HMR port.
         hmr: false,
+        ws: false,
         watch: null
       },
       appType: "spa"
@@ -1086,8 +1089,8 @@ async function startServer() {
       res.sendFile(import_path.default.join(distPath, "index.html"));
     });
   }
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`\u{1F3C7} TURBO-10X PRO Server running on http://0.0.0.0:${PORT}`);
+  httpServer.listen(PORT, "0.0.0.0", () => {
+    console.log(`TURBO-10X PRO Server running on http://0.0.0.0:${PORT}`);
   });
 }
 startServer();
