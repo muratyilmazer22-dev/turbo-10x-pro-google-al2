@@ -1,0 +1,221 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Radial Gradient: Pure Dark Luxury (#131314) -->
+    <radialGradient id="bgDark" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#22242C" />
+      <stop offset="60%" stop-color="#131314" />
+      <stop offset="100%" stop-color="#08080A" />
+    </radialGradient>
+
+    <!-- Deep Warm Gold Gradient (Koyu Altın Sarısı / 24K Gold) -->
+    <linearGradient id="deepGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFEAA7" />
+      <stop offset="25%" stop-color="#FFD700" />
+      <stop offset="50%" stop-color="#D4AF37" />
+      <stop offset="75%" stop-color="#AA771C" />
+      <stop offset="100%" stop-color="#6B4700" />
+    </linearGradient>
+
+    <linearGradient id="lightGold" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFD700" />
+      <stop offset="50%" stop-color="#FFF3B0" />
+      <stop offset="100%" stop-color="#C59B27" />
+    </linearGradient>
+
+    <linearGradient id="accentGold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFE885" />
+      <stop offset="100%" stop-color="#B8860B" />
+    </linearGradient>
+
+    <!-- Outer Gold Ring -->
+    <linearGradient id="ringGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFDF00" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#D4AF37" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#996515" stop-opacity="0.9" />
+    </linearGradient>
+
+    <!-- Gold Glow Filter -->
+    <filter id="goldGlow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#D4AF37" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Squircle App Canvas Background -->
+  <rect width="512" height="512" rx="115" fill="url(#bgDark)" />
+  <rect width="496" height="496" x="8" y="8" rx="107" fill="none" stroke="url(#ringGold)" stroke-width="3" />
+  <circle cx="256" cy="245" r="185" fill="none" stroke="url(#ringGold)" stroke-width="1.5" stroke-dasharray="6 6" opacity="0.35" />
+
+  <!-- DÖRTNALA ŞAHLANMIŞ KOŞAN ALTIN SAFKAN (Yüklenen Çin Atı Yılı Temalı Dörtnala Figür) -->
+  <g transform="translate(42, 38) scale(0.84)" filter="url(#goldGlow)">
+    
+    <!-- Gövde, But ve Sağrı Ana Kas Kütlesi (Koyu Altın) -->
+    <path d="
+      M 165,100
+      C 155,75 140,65 125,72
+      C 115,77 105,95 95,115
+      C 80,125 65,130 50,135
+      C 42,138 38,146 42,154
+      C 50,165 72,175 88,180
+      C 95,200 108,225 128,245
+      C 120,265 110,295 95,335
+      C 88,355 80,380 65,405
+      C 75,410 92,410 105,395
+      C 120,375 132,345 142,315
+      C 152,328 168,340 185,348
+      C 215,358 255,355 295,330
+      C 325,310 345,280 365,245
+      C 385,215 410,185 440,165
+      C 455,155 470,140 480,120
+      C 460,125 435,145 415,170
+      C 395,150 370,135 340,128
+      C 305,120 268,125 235,140
+      C 215,125 190,112 165,100
+      Z
+    " fill="url(#deepGold)" />
+
+    <!-- Ön Bacaklar (Havada Dörtnala Şahlanmış) -->
+    <!-- Sol Ön Bacak (Bükük Şahlanma Pozisyonu) -->
+    <path d="
+      M 135,240
+      C 145,260 152,285 148,310
+      C 145,328 132,350 115,372
+      C 108,382 102,398 95,415
+      C 105,420 120,418 130,402
+      C 142,382 155,358 162,335
+      C 168,315 172,285 168,260
+      Z
+    " fill="url(#lightGold)" />
+    <!-- Sol Ön Toynak -->
+    <path d="M 95,415 L 105,420 L 112,410 L 98,405 Z" fill="#6B4700" />
+
+    <!-- Sağ Ön Bacak (İleri Uzanan Adım) -->
+    <path d="
+      M 175,250
+      C 190,270 205,300 215,330
+      C 222,352 230,380 240,410
+      C 248,435 255,455 260,470
+      C 270,472 282,465 285,450
+      C 282,430 270,400 258,370
+      C 248,340 238,305 225,275
+      C 215,255 200,240 185,235
+      Z
+    " fill="url(#deepGold)" />
+    <!-- Sağ Ön Toynak -->
+    <path d="M 260,470 L 285,450 L 280,442 L 255,460 Z" fill="#6B4700" />
+
+    <!-- Arka Bacaklar (Geriye Güçlü Açılmış İtiş) -->
+    <!-- Sağ Arka Bacak -->
+    <path d="
+      M 340,260
+      C 365,285 390,320 410,360
+      C 425,390 440,425 455,455
+      C 465,458 478,450 480,438
+      C 475,418 455,380 438,345
+      C 420,310 395,275 370,245
+      Z
+    " fill="url(#lightGold)" />
+    <!-- Sağ Arka Toynak -->
+    <path d="M 455,455 L 480,438 L 472,430 L 448,446 Z" fill="#6B4700" />
+
+    <!-- Sol Arka Bacak (Havada Gerilmiş) -->
+    <path d="
+      M 315,280
+      C 335,310 355,345 372,385
+      C 382,410 395,438 408,465
+      C 416,468 426,460 428,448
+      C 422,430 405,398 392,368
+      C 375,330 355,295 335,268
+      Z
+    " fill="url(#deepGold)" />
+    <path d="M 408,465 L 428,448 L 422,440 L 402,456 Z" fill="#6B4700" />
+
+    <!-- Dalgalanan Zengin İpek Kuyruk (Rüzgarda Uçuşan Altın Detaylar) -->
+    <path d="
+      M 365,220
+      C 390,215 425,220 455,235
+      C 480,248 505,270 515,295
+      C 520,305 515,315 502,312
+      C 485,305 468,285 450,270
+      C 432,258 410,250 385,245
+      Z
+    " fill="url(#lightGold)" />
+    <path d="
+      M 380,235
+      C 410,240 445,255 475,280
+      C 495,300 508,325 500,340
+      C 490,345 478,335 465,315
+      C 448,292 425,275 398,260
+      Z
+    " fill="url(#deepGold)" />
+    <path d="
+      M 370,248
+      C 400,265 430,290 455,325
+      C 470,348 475,370 465,378
+      C 455,380 445,365 435,342
+      C 420,312 398,288 375,270
+      Z
+    " fill="url(#accentGold)" />
+
+    <!-- Şahlanan Yele Detayları (Geleneksel Sanat & Çin At Yılı Kıvrımları) -->
+    <path d="
+      M 160,85
+      C 175,65 195,50 220,40
+      C 230,35 235,42 228,50
+      C 215,62 198,78 185,95
+      Z
+    " fill="url(#lightGold)" />
+    <path d="
+      M 180,95
+      C 200,75 225,58 255,48
+      C 265,45 268,52 260,60
+      C 245,75 225,95 210,115
+      Z
+    " fill="url(#lightGold)" />
+    <path d="
+      M 205,115
+      C 230,92 260,75 295,65
+      C 305,62 308,70 298,78
+      C 278,95 252,118 232,140
+      Z
+    " fill="url(#lightGold)" />
+    <path d="
+      M 230,135
+      C 255,115 285,100 320,92
+      C 330,90 332,98 322,105
+      C 298,122 272,145 250,165
+      Z
+    " fill="url(#lightGold)" />
+
+    <!-- Baş, Göz, Burun ve Kulak Detayları -->
+    <path d="M 125,72 L 140,50 L 148,68 Z" fill="#FFEAA7" />
+    <circle cx="75" cy="148" r="5" fill="#131314" />
+    <circle cx="76" cy="147" r="1.8" fill="#FFF" />
+    <path d="M 50,158 C 45,162 48,168 55,165" fill="none" stroke="#6B4700" stroke-width="2.5" stroke-linecap="round" />
+
+    <!-- Kas & Kabartma Işık Yansımaları -->
+    <path d="
+      M 125,185
+      C 135,170 160,165 185,172
+      C 175,185 155,190 138,198
+      Z
+    " fill="#FFF3B0" opacity="0.6" />
+
+    <path d="
+      M 240,165
+      C 265,150 300,152 335,168
+      C 315,182 285,180 255,188
+      Z
+    " fill="#FFF3B0" opacity="0.5" />
+
+    <path d="
+      M 285,225
+      C 315,205 345,210 370,230
+      C 350,248 325,245 298,255
+      Z
+    " fill="#FFF3B0" opacity="0.4" />
+  </g>
+
+  <!-- Alt Metin: TURBO 10X PRO (Lüks Tipografi) -->
+  <text x="256" y="445" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="34" fill="url(#deepGold)" text-anchor="middle" letter-spacing="5">TURBO 10X</text>
+  <text x="256" y="475" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="700" font-size="14" fill="#D4AF37" text-anchor="middle" letter-spacing="6">AI PRO RACING</text>
+</svg>

@@ -1,21 +1,70 @@
 {
-  "short_name": "TURBO-10X",
-  "name": "TURBO-10X PRO Yarış Analiz",
+  "name": "TURBO 10X PRO",
+  "short_name": "TURBO 10X",
+  "description": "Google AI Destekli Deterministik TJK At Yarışı Analiz ve Bütçe Motoru",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "window-controls-overlay"
+  ],
+  "background_color": "#131314",
+  "theme_color": "#131314",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "https://img.icons8.com/color/192/horse-racing.png",
+      "src": "/icon.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "sizes": "192x192"
+      "purpose": "any"
     },
     {
-      "src": "https://img.icons8.com/color/512/horse-racing.png",
+      "src": "/icon-512.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "sizes": "512x512"
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ],
-  "start_url": "/",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
-  "display": "standalone",
-  "orientation": "portrait"
+  "categories": [
+    "sports",
+    "utilities",
+    "finance"
+  ],
+  "shortcuts": [
+    {
+      "name": "AI Yarış Analizi",
+      "short_name": "AI Analiz",
+      "description": "20-Parametreli AHP Yapay Zeka Analizini Başlat",
+      "url": "/?menu=ai_chat",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
 }
