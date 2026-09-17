@@ -227,7 +227,10 @@ export class SafetyTicketValidator {
       }
 
       // Safkanları güvenle ayrıştır
-      const rawRunnersList = (rawLeg && (rawLeg.chosenRunners || rawLeg.horses || rawLeg.rankedRunners)) || [];
+      const rawRunnersList = (rawLeg && (rawLeg.chosenRunners || rawLeg.horses || rawLeg.rankedRunners || [
+        rawLeg.primaryPick,
+        ...(Array.isArray(rawLeg.alternativePicks) ? rawLeg.alternativePicks : [])
+      ].filter(Boolean))) || [];
       const sanitizedRunners: any[] = [];
       const seenNos = new Set<string>();
 
@@ -239,8 +242,8 @@ export class SafetyTicketValidator {
         const weight = Number.isFinite(Number(r.weight)) ? Number(r.weight) : 0;
         const odds = r.odds || r.marketOdds ? String(r.odds || r.marketOdds) : 'VERİ YOK';
         const agf = r.agf || r.agfPercent ? String(r.agf || r.agfPercent) : 'VERİ YOK';
-        const score = Number.isFinite(Number(r.score)) ? Number(r.score) : 0;
-        const insight = String(r.insight || r.aiInsight || 'Gerekçe verisi yok; puanlama bu alana dayanmadı.');
+        const score = Number.isFinite(Number(r.score ?? r.legRealScore)) ? Number(r.score ?? r.legRealScore) : 0;
+        const insight = String(r.insight || r.aiInsight || r.reasoning || 'Gerekçe verisi yok; puanlama bu alana dayanmadı.');
 
         if (num.length > 0 && name.length > 0 && !seenNos.has(num)) {
           seenNos.add(num);
