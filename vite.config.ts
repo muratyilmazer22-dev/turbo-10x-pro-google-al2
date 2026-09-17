@@ -18,6 +18,9 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'lucide-react', 'motion'],
+    },
     server: {
       // Google AI Studio and the hosted preview do not provide a stable
       // WebSocket endpoint for Vite HMR. Disable the client and watcher so
