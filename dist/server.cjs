@@ -730,6 +730,48 @@ function parseRaces(bulletinText, oyunProgrami) {
   }
   return { selectedRaces, startRaceNum, totalRacesFound };
 }
+async function runCentralOrchestrator(input) {
+  const model = process.env.GEMINI_MODEL || "gemini-2.5-pro";
+  const memoryUsed = input.memoryMatches;
+  const fallback = {
+    status: "deterministic_fallback",
+    model: "20-parametre-kural-motoru",
+    summary: `${input.races.length} ayak, ${memoryUsed} haf\u0131za e\u015Fle\u015Fmesi ve skor s\u0131ralamas\u0131 deterministik do\u011Frulama ile haz\u0131rland\u0131.`,
+    riskFlags: memoryUsed === 0 ? ["Bu program i\xE7in e\u015Fle\u015Fen haf\u0131za kayd\u0131 yok."] : [],
+    recommendations: ["Sonu\xE7lar kesinlik de\u011Fil, olas\u0131l\u0131k s\u0131ralamas\u0131d\u0131r.", "Yar\u0131\u015F sonucu i\u015Flendi\u011Finde \xF6\u011Frenme d\xF6ng\xFCs\xFC g\xFCncellenmelidir."],
+    confidence: memoryUsed > 0 ? 0.72 : 0.58,
+    memoryUsed
+  };
+  if (!process.env.GEMINI_API_KEY) return fallback;
+  try {
+    const prompt = `Sen merkezi yar\u0131\u015F analiz orkestrat\xF6r\xFCs\xFCn. Kural motorunun \xE7\u0131kt\u0131s\u0131n\u0131 denetle; yeni veri uydurma, kesin bahis vaadi verme. JSON d\xF6nd\xFCr: summary (string), riskFlags (string[]), recommendations (string[]), confidence (0..1).
+Program: ${input.hipodrom} / ${input.programType}
+Haf\u0131za e\u015Fle\u015Fmesi: ${memoryUsed}
+Ko\u015Fu \xE7\u0131kt\u0131s\u0131: ${JSON.stringify(input.races).slice(0, 24e3)}`;
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.1 } })
+    });
+    if (!response.ok) return fallback;
+    const payload = await response.json();
+    const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const parsed = text ? JSON.parse(text) : null;
+    if (!parsed || typeof parsed.summary !== "string") return fallback;
+    return {
+      status: "ai_verified",
+      model,
+      memoryUsed,
+      summary: parsed.summary,
+      riskFlags: Array.isArray(parsed.riskFlags) ? parsed.riskFlags.slice(0, 8) : [],
+      recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations.slice(0, 8) : [],
+      confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || fallback.confidence))
+    };
+  } catch (error) {
+    console.error("[v0] Central orchestrator fallback:", error);
+    return fallback;
+  }
+}
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", time: (/* @__PURE__ */ new Date()).toISOString() });
 });
@@ -767,7 +809,7 @@ app.post("/api/bulletins", (req, res) => {
   saveDB(db);
   res.json({ success: true, message: `${hipodrom} b\xFClteni veritaban\u0131na ba\u015Far\u0131yla kaydedildi.` });
 });
-app.post("/api/analyze", (req, res) => {
+app.post("/api/analyze", async (req, res) => {
   const { bulletinText, oyunProgrami, hipodrom } = req.body;
   if (!bulletinText || !bulletinText.trim()) {
     return res.status(400).json({ error: "L\xFCtfen analiz edilecek b\xFClten metnini girin." });
@@ -840,6 +882,12 @@ app.post("/api/analyze", (req, res) => {
     }
   });
   const bestBanko = bankoList.length > 0 ? [...bankoList].sort((a, b) => b.score - a.score)[0] : null;
+  const orchestrator = await runCentralOrchestrator({
+    hipodrom: hipodrom || "GENEL",
+    programType: resolvedProgram.programType,
+    races: raceResults,
+    memoryMatches: totalMemoryMatchesCount
+  });
   res.json({
     races: raceResults,
     startRaceNum,
@@ -851,7 +899,8 @@ app.post("/api/analyze", (req, res) => {
       totalMemoryMatches: totalMemoryMatchesCount,
       bestBanko: bestBanko ? `${bestBanko.leg}. Ayak (#${bestBanko.horse} - Skor: ${bestBanko.score})` : "Veri Yetersiz",
       bankoList,
-      surpriseList
+      surpriseList,
+      orchestrator
     }
   });
 });
@@ -1001,7 +1050,8 @@ app.post("/api/learn-result", (req, res) => {
   const trackConditionStr = trackCondition || "Normal 3.3";
   db.wins[normWinner] = (db.wins[normWinner] || 0) + 1;
   const previousWins = db.wins[normWinner] - 1;
-  const scoreBoost = Number((2.5 + Math.random() * 1.5).toFixed(2));
+  const contextEvidence = [normJockey, distanceStr, trackTypeStr, trackConditionStr].filter(Boolean).length;
+  const scoreBoost = Number(Math.min(6, 2 + Math.log1p(previousWins) * 0.8 + contextEvidence * 0.15).toFixed(2));
   const learningEvent = {
     id: db.learning_events.length + 1,
     horse_name: normWinner,

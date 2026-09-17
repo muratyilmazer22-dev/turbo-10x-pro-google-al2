@@ -864,6 +864,61 @@ function parseRaces(bulletinText: string, oyunProgrami: string) {
   return { selectedRaces, startRaceNum, totalRacesFound };
 }
 
+type OrchestratorDecision = {
+  status: 'ai_verified' | 'deterministic_fallback';
+  model: string;
+  summary: string;
+  riskFlags: string[];
+  recommendations: string[];
+  confidence: number;
+  memoryUsed: number;
+};
+
+async function runCentralOrchestrator(input: {
+  hipodrom: string;
+  programType: string;
+  races: any[];
+  memoryMatches: number;
+}): Promise<OrchestratorDecision> {
+  const model = process.env.GEMINI_MODEL || 'gemini-2.5-pro';
+  const memoryUsed = input.memoryMatches;
+  const fallback: OrchestratorDecision = {
+    status: 'deterministic_fallback',
+    model: '20-parametre-kural-motoru',
+    summary: `${input.races.length} ayak, ${memoryUsed} hafıza eşleşmesi ve skor sıralaması deterministik doğrulama ile hazırlandı.`,
+    riskFlags: memoryUsed === 0 ? ['Bu program için eşleşen hafıza kaydı yok.'] : [],
+    recommendations: ['Sonuçlar kesinlik değil, olasılık sıralamasıdır.', 'Yarış sonucu işlendiğinde öğrenme döngüsü güncellenmelidir.'],
+    confidence: memoryUsed > 0 ? 0.72 : 0.58,
+    memoryUsed
+  };
+
+  if (!process.env.GEMINI_API_KEY) return fallback;
+
+  try {
+    const prompt = `Sen merkezi yarış analiz orkestratörüsün. Kural motorunun çıktısını denetle; yeni veri uydurma, kesin bahis vaadi verme. JSON döndür: summary (string), riskFlags (string[]), recommendations (string[]), confidence (0..1).\nProgram: ${input.hipodrom} / ${input.programType}\nHafıza eşleşmesi: ${memoryUsed}\nKoşu çıktısı: ${JSON.stringify(input.races).slice(0, 24000)}`;
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.1 } })
+    });
+    if (!response.ok) return fallback;
+    const payload: any = await response.json();
+    const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const parsed = text ? JSON.parse(text) : null;
+    if (!parsed || typeof parsed.summary !== 'string') return fallback;
+    return {
+      status: 'ai_verified', model, memoryUsed,
+      summary: parsed.summary,
+      riskFlags: Array.isArray(parsed.riskFlags) ? parsed.riskFlags.slice(0, 8) : [],
+      recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations.slice(0, 8) : [],
+      confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || fallback.confidence))
+    };
+  } catch (error) {
+    console.error('[v0] Central orchestrator fallback:', error);
+    return fallback;
+  }
+}
+
 // --- API ROUTES ---
 
 // Healthcheck API
@@ -918,7 +973,7 @@ app.post('/api/bulletins', (req, res) => {
 });
 
 // Analyze Bulletin Endpoint
-app.post('/api/analyze', (req, res) => {
+app.post('/api/analyze', async (req, res) => {
   const { bulletinText, oyunProgrami, hipodrom } = req.body;
 
   if (!bulletinText || !bulletinText.trim()) {
@@ -1005,6 +1060,12 @@ app.post('/api/analyze', (req, res) => {
   });
 
   const bestBanko = bankoList.length > 0 ? [...bankoList].sort((a, b) => b.score - a.score)[0] : null;
+  const orchestrator = await runCentralOrchestrator({
+    hipodrom: hipodrom || 'GENEL',
+    programType: resolvedProgram.programType,
+    races: raceResults,
+    memoryMatches: totalMemoryMatchesCount
+  });
 
   res.json({
     races: raceResults,
@@ -1017,7 +1078,8 @@ app.post('/api/analyze', (req, res) => {
       totalMemoryMatches: totalMemoryMatchesCount,
       bestBanko: bestBanko ? `${bestBanko.leg}. Ayak (#${bestBanko.horse} - Skor: ${bestBanko.score})` : "Veri Yetersiz",
       bankoList,
-      surpriseList
+      surpriseList,
+      orchestrator
     }
   });
 });
@@ -1212,9 +1274,10 @@ app.post('/api/learn-result', (req, res) => {
   // Update wins database
   db.wins[normWinner] = (db.wins[normWinner] || 0) + 1;
 
-  // Calculate learning score delta
+  // Calculate a reproducible learning delta from observed evidence; never inject randomness.
   const previousWins = db.wins[normWinner] - 1;
-  const scoreBoost = Number((2.5 + Math.random() * 1.5).toFixed(2));
+  const contextEvidence = [normJockey, distanceStr, trackTypeStr, trackConditionStr].filter(Boolean).length;
+  const scoreBoost = Number(Math.min(6, 2 + Math.log1p(previousWins) * 0.8 + contextEvidence * 0.15).toFixed(2));
 
   // Log Learning Event
   const learningEvent = {
