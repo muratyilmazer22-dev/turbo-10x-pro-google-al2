@@ -3499,7 +3499,7 @@ export default function App() {
         {/* TOP HEADER BAR */}
         <header className="border-b border-[#2A2D35] bg-[#1B1D23] shrink-0">
           {/* Main Header Row */}
-          <div className="h-12 px-3 sm:px-6 flex items-center justify-between gap-2">
+          <div className="h-[104px] sm:h-16 px-3 sm:px-6 flex items-center justify-between gap-2">
             {/* Left Side: Toggle Menu & Desktop Module Tabs */}
             <div className="flex items-center gap-2 sm:gap-3">
               <button
@@ -3510,14 +3510,14 @@ export default function App() {
                     setSidebarCollapsed(!sidebarCollapsed);
                   }
                 }}
-                className="p-1.5 text-[#8E9299] hover:text-white rounded-lg border border-[#2A2D35] bg-[#0F1012] min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer active:bg-white/5 transition-colors shrink-0"
+                className="p-2.5 text-[#8E9299] hover:text-white rounded-xl border border-[#2A2D35] bg-[#0F1012] min-h-[52px] min-w-[52px] flex items-center justify-center cursor-pointer active:bg-white/5 transition-colors shrink-0"
                 title="Yan Paneli Aç / Kapat"
                 aria-label="Yan Paneli Aç / Kapat"
               >
                 <Menu className="w-5 h-5 text-amber-500" />
               </button>
 
-              <span className="text-amber-500 font-extrabold text-sm sm:hidden flex items-center gap-1.5">
+              <span className="text-amber-500 font-black text-xl sm:hidden flex items-center gap-2 tracking-tight">
                 <Sparkles className="w-4 h-4 text-cyan-400" />
                 TURBO 10X PRO
               </span>
@@ -7595,7 +7595,7 @@ export default function App() {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
-                            title: `🌉 ÇAPRAZ GÜVENCE KUPONLARI (${selectedHipodrom})`,
+                            title: `�� ÇAPRAZ GÜVENCE KUPONLARI (${selectedHipodrom})`,
                             content: `${crossCouponDetails.altili1Text}\n\n====================\n\n${crossCouponDetails.altili2Text}`,
                             category: 'GENEL'
                           })
