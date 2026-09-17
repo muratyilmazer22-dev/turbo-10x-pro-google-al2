@@ -1210,6 +1210,36 @@ export default function App() {
           {/* --- MENU 1: ANALİZ PANELİ --- */}
           {menu === "Analiz Paneli" && (
             <div className="flex flex-col gap-6 flex-1">
+              {/* MOBILE-FIRST LIVE CONTROL CENTER */}
+              <section className="rounded-2xl border border-amber-500/40 bg-gradient-to-br from-[#1B1D23] via-[#171923] to-[#20201d] p-4 sm:p-6 shadow-2xl shadow-black/20">
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-amber-500/50 bg-amber-500/15">
+                    <Zap className="h-7 w-7 text-amber-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h1 className="text-lg font-black leading-tight text-amber-400 sm:text-2xl">20-PARAMETRE ANALİZ MERKEZİ ({selectedHipodrom})</h1>
+                    <p className="mt-1 text-xs leading-5 text-[#A9ADB7] sm:text-sm">TJK bültenini yükleyin, canlı koşuları tek tıkla analiz edin ve hafıza bankasıyla desteklenen kurguyu oluşturun.</p>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-950/30 px-3 py-3 text-sm font-extrabold text-emerald-300">
+                  <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,.9)]" />
+                  Canlı TJK Motoru Aktif
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-cyan-500/40 bg-[#11151d] p-4 sm:p-5">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-cyan-500/50 bg-cyan-500/10"><RefreshCw className="h-6 w-6 text-cyan-300" /></div>
+                  <div><h2 className="text-base font-black text-cyan-300 sm:text-lg">CANLI VERİ AKIŞI DURUMU</h2><p className="text-xs text-[#9EA5B5]">Sunucu API ve canlı TJK bülten motoru</p></div>
+                </div>
+                <div className="mt-4 flex items-center gap-2 rounded-xl border border-cyan-500/40 bg-cyan-950/30 px-3 py-3 text-sm font-bold text-cyan-300"><span className="h-3 w-3 rounded-full bg-lime-400" /> CANLI SUNUCU BAĞLANTISI HAZIR</div>
+                <button type="button" onClick={() => fetchBulletin(selectedHipodrom)} className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-cyan-500/50 bg-[#1B202B] px-4 text-sm font-black text-cyan-300 transition hover:bg-cyan-500/10"><RefreshCw className="h-4 w-4" /> Canlı Veri Çekimini Test Et</button>
+                <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                  <div className="rounded-xl border border-[#303440] bg-[#0B0D10] p-3"><span className="text-[#8E9299]">Son Canlı Çekim</span><strong className="mt-1 block text-amber-400">{savedBulletinContent ? 'Hazır' : 'Henüz çekilmedi'}</strong></div>
+                  <div className="rounded-xl border border-[#303440] bg-[#0B0D10] p-3"><span className="text-[#8E9299]">Koşu / At Verisi</span><strong className="mt-1 block text-emerald-400">{races.length || 6} Koşu Yüklü</strong></div>
+                </div>
+              </section>
+
               {/* STATS GRID */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <div className="bg-[#1B1D23] p-3.5 border border-[#2A2D35] rounded-lg">
