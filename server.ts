@@ -1304,8 +1304,10 @@ async function startServer() {
         middlewareMode: true,
         // Google AI Studio yeniden başlatmalarında eski HMR soketi portu
         // kilitli bırakabildiği için sunucu tarafı Vite HMR'ını kapatıyoruz.
-        hmr: false,
-        watch: null,
+    hmr: false,
+      // Do not create or advertise a WebSocket server in hosted previews.
+      ws: false,
+      watch: null,
       },
       appType: "spa",
     });
