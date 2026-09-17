@@ -48,6 +48,25 @@ const HIPODROMS = [
   "ŞANLIURFA"
 ];
 
+function resolveSixGameProgram(programInput: string): string {
+  const normalized = (programInput || "")
+    .trim()
+    .toLocaleUpperCase('tr-TR')
+    .replace(/İ/g, 'I')
+    .replace(/ı/g, 'i');
+
+  if (
+    /(?:^|\s)(?:1(?:\s*[.]\s*)?|BIRINCI|ILK)(?:\s+ALTILI)?(?:\s+GANYAN)?(?:\s|$)/.test(normalized) ||
+    normalized.includes('1 ALTILI') ||
+    normalized.includes('ILK ALTILI') ||
+    normalized.includes('BIRINCI ALTILI')
+  ) {
+    return '1. Altılı Ganyan';
+  }
+
+  return '2. Altılı Ganyan';
+}
+
 const CATEGORIES = [
   { key: "HEPSİ", label: "Tüm Kategoriler" },
   { key: "HAFIZA_NOTU", label: "🧠 Hafıza Notu" },
@@ -76,7 +95,7 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [selectedHipodrom, setSelectedHipodrom] = useState<string>("İSTANBUL");
-  const [oyunProgrami, setOyunProgrami] = useState<string>("1. Altılı Ganyan");
+  const [oyunProgrami, setOyunProgrami] = useState<string>("2. Altılı Ganyan");
 
   // Bulletin & Analysis State
   const [savedBulletinContent, setSavedBulletinContent] = useState<string>("");
@@ -402,6 +421,11 @@ export default function App() {
       return;
     }
 
+    const resolvedProgram = resolveSixGameProgram(oyunProgrami);
+    if (resolvedProgram !== oyunProgrami) {
+      setOyunProgrami(resolvedProgram);
+    }
+
     setLoading(true);
     setStatusMessage(null);
     try {
@@ -410,7 +434,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bulletinText: textToAnalyze,
-          oyunProgrami,
+          oyunProgrami: resolvedProgram,
           hipodrom: selectedHipodrom
         })
       });
@@ -837,7 +861,7 @@ export default function App() {
             {[
               { id: "Analiz Paneli", label: "Analiz Paneli", icon: Zap },
               { id: "Kendi Veri Bankam", label: "Hafıza Bankası", icon: BookOpen },
-              { id: "Bülten Yükle / Yönet", label: "Bülten Yönetimi", icon: FileText },
+              { id: "Bülten Yükle / Yönet", label: "Bülten Y��netimi", icon: FileText },
               { id: "Öğrenme Logları", label: "Öğrenme Logları", icon: Layers }
             ].map((navItem) => {
               const isActive = menu === navItem.id;
@@ -2076,7 +2100,7 @@ export default function App() {
                         type="text"
                         value={learnDistance}
                         onChange={(e) => setLearnDistance(e.target.value)}
-                        placeholder="Örn: 1400m"
+                        placeholder="��rn: 1400m"
                         className="w-full bg-[#0F1012] border border-[#2A2D35] text-white rounded-lg px-3 py-2 text-xs font-semibold focus:border-amber-500 focus:outline-none min-h-[40px]"
                       />
                     </div>
