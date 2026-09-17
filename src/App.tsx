@@ -818,7 +818,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-[#151619] text-[#E0E0E0] font-sans overflow-hidden">
+    <div className="app-shell flex h-screen w-full bg-[#151619] text-[#E0E0E0] font-sans overflow-hidden">
       {/* MOBILE DRAWER OVERLAY */}
       {mobileMenuOpen && (
         <div
@@ -829,7 +829,7 @@ export default function App() {
 
       {/* SIDEBAR NAVIGATION (Desktop & Mobile Drawer) */}
       <aside
-        className={`fixed md:relative z-50 top-0 bottom-0 left-0 w-72 md:w-64 border-r border-[#2A2D35] flex flex-col bg-[#151619] shrink-0 transition-all duration-300 ${
+        className={`app-sidebar fixed md:relative z-50 top-0 bottom-0 left-0 w-72 md:w-64 border-r border-[#2A2D35] flex flex-col bg-[#151619] shrink-0 transition-all duration-300 ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         } ${sidebarCollapsed ? 'md:hidden' : ''}`}
       >
@@ -1071,7 +1071,7 @@ export default function App() {
       {/* MAIN CONTAINER */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* TOP HEADER BAR */}
-        <header className="border-b border-[#2A2D35] bg-[#1B1D23] shrink-0">
+        <header className="app-header border-b border-[#2A2D35] bg-[#1B1D23] shrink-0">
           {/* Main Header Row */}
           <div className="h-16 px-3 sm:px-6 flex items-center justify-between gap-2">
             {/* Left Side: Toggle Menu & Desktop Module Tabs */}
@@ -1177,7 +1177,7 @@ export default function App() {
         </header>
 
         {/* CONTENT AREA */}
-        <main className="flex-1 p-4 sm:p-6 overflow-y-auto flex flex-col gap-6 pb-24">
+        <main className="app-main flex-1 p-4 sm:p-6 overflow-y-auto flex flex-col gap-6 pb-24">
           {/* Status Message */}
           {statusMessage && (
             <div
