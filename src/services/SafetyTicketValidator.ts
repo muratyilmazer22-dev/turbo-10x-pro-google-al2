@@ -150,7 +150,7 @@ export class SafetyTicketValidator {
         ],
         // 4. Ayak
         [
-          { num: '1', name: 'LITTLE JOE', jockey: 'N.AVCI', weight: 60, odds: '2.30', agf: '32', score: 96, insight: 'Uzun mesafeli kum yarışında sınıf üstünlüğüyle tartışmasız ilk şanslı isim.' },
+          { num: '1', name: 'LITTLE JOE', jockey: 'N.AVCI', weight: 60, odds: '2.30', agf: '32', score: 96, insight: 'Uzun mesafeli kum yarışında sınıf üstünlüğüyle tartışmasız ilk ��anslı isim.' },
           { num: '2', name: 'DISTANCE RUNNER', jockey: 'M.KAYA', weight: 58, odds: '3.40', agf: '25', score: 88, insight: 'M.Kaya ile düzlükte sonuca gidebilecek en sert rakip.' }
         ],
         // 5. Ayak
@@ -197,10 +197,9 @@ export class SafetyTicketValidator {
       ]
     };
 
-    const normTargetH = (targetHipodrom || '').toUpperCase().replace(/İ/g, 'I');
-    let fallbackLegPool = hipodromLegPools.BURSA;
-    if (normTargetH.includes('IZMIR')) fallbackLegPool = hipodromLegPools.İZMİR;
-    else if (normTargetH.includes('ISTANBUL')) fallbackLegPool = hipodromLegPools.İSTANBUL;
+    // Do not synthesize runners from a city library. Every runner must come from
+    // the current bulletin or an explicitly supplied analysis result.
+    const fallbackLegPool: any[] = [];
 
     // First collect all leg candidates
     const rawValidatedLegs: any[] = [];
@@ -210,10 +209,10 @@ export class SafetyTicketValidator {
     for (let i = 0; i < 6; i++) {
       const rawLeg = (rawLegs && rawLegs[i]) ? rawLegs[i] : null;
       const legIndex = i + 1;
-      const raceNo = (rawLeg && (rawLeg.raceNo || rawLeg.raceNumber)) ? Number(rawLeg.raceNo || rawLeg.raceNumber) : (defaultStartRace + i);
-      const distance = (rawLeg && rawLeg.distance) ? Number(rawLeg.distance) : (1400 + i * 100);
-      const surface = (rawLeg && rawLeg.surface) ? String(rawLeg.surface) : (i % 2 === 0 ? 'Kum' : 'Çim');
-      const condition = (rawLeg && rawLeg.condition) ? String(rawLeg.condition) : `Şartlı ${i + 2} / ${surface} ${distance}m`;
+      const raceNo = (rawLeg && (rawLeg.raceNo || rawLeg.raceNumber)) ? Number(rawLeg.raceNo || rawLeg.raceNumber) : 0;
+      const distance = (rawLeg && rawLeg.distance) ? Number(rawLeg.distance) : 0;
+      const surface = (rawLeg && rawLeg.surface) ? String(rawLeg.surface) : 'VERİ YOK';
+      const condition = (rawLeg && rawLeg.condition) ? String(rawLeg.condition) : 'VERİ YOK';
 
       // Pace & Koşu Karakteri Ayrıştırması
       let paceCategory = '⚡ Süratli (Yüksek Erken Tempo)';
@@ -234,16 +233,16 @@ export class SafetyTicketValidator {
 
       for (let hIdx = 0; hIdx < rawRunnersList.length; hIdx++) {
         const r = rawRunnersList[hIdx];
-        const num = String(r.num || r.no || r.horseNo || (hIdx + 1)).trim();
-        const name = String(r.name || r.horseName || `SAFKAN ${num}`).trim().toUpperCase();
-        const jockey = String(r.jockey || r.jockeyName || 'G.KOCAKAYA').trim();
-        const weight = Number(r.weight) || 56;
-        const odds = String(r.odds || r.marketOdds || (2.5 + hIdx * 1.5));
-        const agf = String(r.agf || r.agfPercent || (hIdx === 0 ? '35' : '15'));
-        const score = Number(r.score) || (90 - hIdx * 10);
-        const insight = String(r.insight || r.aiInsight || (hIdx === 0 ? 'Grup içinde en yüksek form puanına ve sprint gücüne sahip safkan.' : 'Mesafe ve jokey uyumuyla sağlam alternatif.'));
+        const num = String(r.num || r.no || r.horseNo || '').trim();
+        const name = String(r.name || r.horseName || '').trim().toUpperCase();
+        const jockey = String(r.jockey || r.jockeyName || '').trim();
+        const weight = Number.isFinite(Number(r.weight)) ? Number(r.weight) : 0;
+        const odds = r.odds || r.marketOdds ? String(r.odds || r.marketOdds) : 'VERİ YOK';
+        const agf = r.agf || r.agfPercent ? String(r.agf || r.agfPercent) : 'VERİ YOK';
+        const score = Number.isFinite(Number(r.score)) ? Number(r.score) : 0;
+        const insight = String(r.insight || r.aiInsight || 'Gerekçe verisi yok; puanlama bu alana dayanmadı.');
 
-        if (!seenNos.has(num) && name.length > 0) {
+        if (num.length > 0 && name.length > 0 && !seenNos.has(num)) {
           seenNos.add(num);
           sanitizedRunners.push({
             num,
@@ -278,6 +277,23 @@ export class SafetyTicketValidator {
         paceDetail,
         sanitizedRunners
       });
+    }
+
+    // Never continue into coupon optimization with missing legs. A generated
+    // placeholder would make the ticket look valid while breaking source integrity.
+    if (rawValidatedLegs.some((leg) => leg.sanitizedRunners.length === 0)) {
+      return {
+        hipodrom: targetHipodrom,
+        program: targetProgram,
+        unitPrice: safeUnitPrice,
+        targetBudget: safeBudget,
+        calculatedCost: 0,
+        combinations: 0,
+        winPercentage: 0,
+        totalEV: 'HESAPLANAMAZ',
+        legs: [],
+        formattedOutput: 'Eksik Veri Tespiti: Altılı kupon oluşturulmadı. Her ayak için güncel ve doğrulanmış bülten at listesi gereklidir.'
+      };
     }
 
     // ============================================================================
@@ -505,17 +521,19 @@ export class SafetyTicketValidator {
     // Matematiksel Kombinasyon ve Tutar Sağlaması
     const combinations = validatedLegs.reduce((acc, l) => acc * Math.max(1, l.count), 1);
     const calculatedCost = Number((combinations * safeUnitPrice).toFixed(2));
-    const winPercentage = 31.8;
-    const totalEV = '1.42';
+    // The validator must not invent win probabilities or EV. Those values belong
+    // to the quantitative engine and require a real model/market input.
+    const winPercentage = 0;
+    const totalEV = 'HESAPLANAMAZ';
 
     // Standart Kırılmaz Çıktı Şablonu
     const formattedOutput =
       `🎯 **TURBO 10X PRO — ${targetProgram.toUpperCase()} DİNAMİK ESNEKLİK VE HAYATTA KALMA ŞABLONU**\n\n` +
       `🛡️ **1. Ayak Hayatta Kalma Kalkanı:** Devrede (${validatedLegs[0]?.count || 4} Safkan ile Kaos Sigortası)\n` +
       `🔥 **Risk Transferi Bankosu:** ${designatedMiddleBankoIdx + 1}. Ayakta **(${validatedLegs[designatedMiddleBankoIdx]?.primary?.num}) ${validatedLegs[designatedMiddleBankoIdx]?.primary?.name}** (${designatedBankoInfo?.reason || 'Sıklet + Tempo'})\n` +
-      `🏆 **Kurgu Kazanma Yüzdesi:** %${winPercentage} (20-Parametre AHP & 10.000 Monte Carlo Simülasyonu)\n` +
+      `🏆 **Gerçek Kazanma Yüzdesi:** ${winPercentage ? `%${winPercentage}` : 'HESAPLANAMAZ — doğrulanmış simülasyon verisi yok'}\n` +
       `💰 **Hedef Bütçe:** ${safeBudget} TL | **Hesaplanan Tutar:** ${calculatedCost} TL (${combinations} Kombinasyon × ${safeUnitPrice} TL) | **Program:** ${targetProgram}\n` +
-      `⚡ **Kurgu Toplam EV:** ${totalEV}x | **Birim Fiyat:** ${safeUnitPrice} TL\n\n` +
+      `⚡ **Gerçek EV:** ${totalEV} | **Birim Fiyat:** ${safeUnitPrice} TL\n\n` +
       `---\n\n` +
       `### 🏇 **AYAK AYAK TEMPO & KOŞU KARAKTERİ AYRIŞTIRMASI & UZMAN GEREKÇELERİ**\n\n` +
       validatedLegs.map(p => {
@@ -545,7 +563,7 @@ export class SafetyTicketValidator {
       `\n----------------------------------------------------\n` +
       `• **Kombinasyon:** ${validatedLegs.map(p => p.count).join(' × ')} = **${combinations} Kombinasyon**\n` +
       `• **GERÇEK TOPLAM TUTAR:** ${combinations} × ${safeUnitPrice} TL = **${calculatedCost} TL**\n` +
-      `• **Pozitif Beklenen Değer:** ${totalEV}x EV\n` +
+      `• **Beklenen Değer:** ${totalEV}\n` +
       `====================================================\n\n` +
       validatedLegs.map(p => `${p.raceNo}.koşu ${p.chosenRunners.map(h => `${h.num} ${h.name}`).join(' ')}`).join('\n');
 
