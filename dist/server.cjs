@@ -29,7 +29,7 @@ var import_vite = require("vite");
 var import_app = require("firebase/app");
 var import_firestore = require("firebase/firestore");
 var app = (0, import_express.default)();
-var PORT = 3e3;
+var PORT = Number(process.env.PORT) || 3e3;
 app.use(import_express.default.json({ limit: "50mb" }));
 app.use(import_express.default.urlencoded({ limit: "50mb", extended: true }));
 app.use((req, res, next) => {
