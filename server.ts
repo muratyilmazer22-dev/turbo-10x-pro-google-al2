@@ -4013,7 +4013,7 @@ function generateDynamicTjkBulletin(hipodromName: string, dateStr?: string): str
 2 - ALATLI (58kg 4y a a SK K.TOKAÇOĞLU)
 3 - GÜMÜŞKESEN (57kg 6y k a KG K M.AKYAVUZ)
 4 - AŞIKBEY (56kg 4y k a DB SK H.ÇİZİK)
-5 - MİRAKIZI (55.5kg 5y k k KG A.ÇELİK)
+5 - M��RAKIZI (55.5kg 5y k k KG A.ÇELİK)
 6 - CEVHER (55kg 7y d a SK G.KOCAKAYA)
 7 - TÜRBOŞAH (54kg 4y k a KG H.KARATAŞ)
 
@@ -5540,6 +5540,25 @@ app.get('/api/bulletins/:hipodrom', (req, res) => {
     updated_at: bulletin.updated_at
   });
 });
+
+  // Persistent archive lookup for the imported Google AI Studio memory.
+  app.get('/api/memory/archive', async (req, res) => {
+    try {
+      const url = process.env.SUPABASE_URL;
+      const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !key) return res.status(503).json({ success: false, error: 'Kalıcı hafıza bağlantısı hazır değil.' });
+      const category = typeof req.query.category === 'string' ? req.query.category : undefined;
+      const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 500);
+      const supabase = createSupabaseClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+      let query = supabase.from('memory_archive').select('category, record_key, payload, imported_at').order('imported_at', { ascending: false }).limit(limit);
+      if (category) query = query.eq('category', category);
+      const { data, error } = await query;
+      if (error) return res.status(500).json({ success: false, error: 'Hafıza okunamadı.' });
+      return res.json({ success: true, records: data || [] });
+    } catch {
+      return res.status(500).json({ success: false, error: 'Hafıza servisi kullanılamıyor.' });
+    }
+  });
 
   // Persistent bulletin memory endpoint. Service-role access stays server-side only.
   app.post('/api/memory/bulletins', async (req, res) => {
@@ -10613,7 +10632,7 @@ app.post('/api/ai/chat', async (req, res) => {
 
       // 5. Fallback pattern
       if (!detectedHorseName) {
-        const mHorse2 = userMessage.match(/([A-ZÇĞİÖŞÜ]{3,20}(?:\s+[A-ZÇĞİÖŞÜ]{2,15})?)\s+(?:kazandı|birinci|geldi|geçti|koştu)/i);
+        const mHorse2 = userMessage.match(/([A-Z��ĞİÖŞÜ]{3,20}(?:\s+[A-ZÇĞİÖŞÜ]{2,15})?)\s+(?:kazandı|birinci|geldi|geçti|koştu)/i);
         if (mHorse2 && mHorse2[1]) {
           const candidate = mHorse2[1].trim();
           const stopWords = ['BINDI VE', 'ILE', 'VE', 'JOKEY', 'KAZANDI', 'GELDI', 'TJK', 'AGF'];
@@ -12811,7 +12830,7 @@ app.post('/api/ai/chat', async (req, res) => {
 3. 🧠 **KENDİ KENDİNE ÖĞRENME VE DERS ÇIKARMA:** Geçmiş matematiksel sapmaları kas hafızası yap. Eğer prompt içinde kayıp verisi/hata bildirimi varsa bunu anında analize yansıt ve hatadan nasıl ders çıkardığını somut AGF/oran verileriyle kullanıcıya hissettir.
 4. 💰 **BÜTÇE VE TEKNİK VERİLERİN GİZLİ ENTEGRASYONU:** 20-Parametreli AHP, Knapsack bütçe ve Track DNA verilerini sohbetin içine görünmez şekilde yedir. Bütçeyi bir matematik problemi gibi değil, "Senin ${activeTargetBudget} liralık bütçeni en iyi şekilde değerlendirmek için şu ayakları biraz geniş tuttum" şeklinde doğal bir dille ifade et.
 5. 📡 **TJK CANLI VERİ SENKRONİZASYONU VE GEÇMİŞ YARIŞ ANALİZİ:** TJK canlı verilerini, bültendeki resmi handikap puanlarını, sıkletleri, ganyanları ve resmi koşu derecelerini değerlendir.
-6. 🎯 **DİNAMİK SAHA SEZGİSİ VE RİSK YÖNETİMİ:**
+6. 🎯 **D��NAMİK SAHA SEZGİSİ VE RİSK YÖNETİMİ:**
    • *Risk Profili (Knapsack):* Kullanıcının risk iştahına (Güvenli/Misli, Dengeli, Agresif/Sürpriz) göre şablonu esnet ("Büyük ikramiyeyi hedeflemek için AGF favorisini yıkıp yüksek değerli sürprizi tek atıyoruz").
    • *Hedef Yarış & Sınıf Değişimi:* Büyük ilden küçük ile gelen veya sınıf düşen safkanları somut handikap/sıklet verileriyle değerlendir.
 7. 🔄 **RESMİ GÖRSEL ANALİZ VE SOMUT KARŞILAŞTIRMA:**

@@ -66,6 +66,7 @@ import AiChatWorkspace from './components/AiChatWorkspace';
 import QuantitativeRaceDashboard from './components/QuantitativeRaceDashboard';
 import { QuantitativeRaceAnalysisResult } from './services/QuantitativeRiskEngine';
 import { RaceActualResult } from './services/LearningFeedbackEngine';
+import { historicalDb } from './services/HistoricalRacingDatabase';
 
 // High-Performance Lazy Loading (Code Splitting): Chat loads instantly, heavy projection loads on-demand
 const LiveRaceProjection = React.lazy(() => import('./components/LiveRaceProjection'));
@@ -2897,8 +2898,16 @@ export default function App() {
       } else {
         setStatusMessage({ type: 'info', text: 'Kayıt yerel cihaz hafızasından silindi.' });
       }
-      fetchMemoryEntries();
-      fetchDbStats();
+    fetchMemoryEntries();
+    void fetch('/api/memory/archive?limit=500')
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (data?.success && Array.isArray(data.records)) {
+          historicalDb.hydrateMemoryArchive(data.records);
+        }
+      })
+      .catch(() => undefined);
+    fetchDbStats();
     } catch (err) {
       setStatusMessage({ type: 'info', text: 'Kayıt yerel cihaz hafızasından silindi.' });
     }
@@ -3365,11 +3374,9 @@ export default function App() {
               <span>Modüller</span>
             </div>
             {[
-              { id: "🤖 AI Sohbet & Analiz", label: "🤖 AI Canlı Kurgu & Sohbet", icon: Sparkles },
-              { id: "Analiz Paneli", label: "🎯 6 Ayak Yarış Matrisi", icon: Zap },
-              { id: "Canlı Yarış Projeksiyonu", label: "⏱️ Canlı Yarış Projeksiyonu", icon: Compass },
-              { id: "Otonom Robot", label: "🤖 Merkezi Otonom Robot", icon: Bot },
-              { id: "Kendi Veri Bankam", label: "🧠 Saha Notları & Hafıza Bankası", icon: BookOpen }
+              { id: "🤖 AI Sohbet & Analiz", label: "AI Kurgu Asistanı", icon: Sparkles },
+              { id: "Analiz Paneli", label: "Yarış Analizi", icon: Zap },
+              { id: "Kendi Veri Bankam", label: "Hafıza Bankası", icon: BookOpen }
             ].map((navItem) => {
               const isActive = menu === navItem.id;
               const Icon = navItem.icon;
@@ -3400,7 +3407,7 @@ export default function App() {
             <div className="flex items-center justify-between">
               <span className="text-[10px] text-amber-400 font-extrabold uppercase tracking-wider flex items-center gap-1.5">
                 <Coins className="w-3.5 h-3.5 text-amber-400" />
-                <span>Birim Fiyat Ayarı</span>
+                <span>Bütçe</span>
               </span>
               <span className="text-[9px] font-mono text-cyan-400 bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-500/30">
                 {Math.floor(targetBudget / unitPrice)} Komb.
@@ -3477,7 +3484,7 @@ export default function App() {
         {/* TOP HEADER BAR */}
         <header className="app-header border-b border-[#2A2D35] bg-[#111318] shrink-0">
           {/* Main Header Row */}
-          <div className="h-[104px] sm:h-16 px-3 sm:px-6 flex items-center justify-between gap-2">
+          <div className="h-[72px] sm:h-16 px-3 sm:px-6 flex items-center justify-between gap-2">
             {/* Left Side: Toggle Menu & Desktop Module Tabs */}
             <div className="flex items-center gap-2 sm:gap-3">
               <button
@@ -3503,11 +3510,9 @@ export default function App() {
               {/* Desktop Header Navigation Tabs */}
               <div className="hidden lg:flex items-center gap-1 bg-[#0F1012] p-1 rounded-lg border border-[#2A2D35]">
                 {[
-                  { id: "🤖 AI Sohbet & Analiz", label: "🤖 AI Canlı Kurgu", icon: Sparkles },
-                  { id: "Analiz Paneli", label: "🎯 6 Ayak Matrisi", icon: Zap },
-                  { id: "Canlı Yarış Projeksiyonu", label: "⏱️ Canlı Projeksiyon", icon: Compass },
-                  { id: "Otonom Robot", label: "🤖 Otonom Robot", icon: Bot },
-                  { id: "Kendi Veri Bankam", label: "🧠 Saha Notları & Hafıza", icon: BookOpen }
+                  { id: "🤖 AI Sohbet & Analiz", label: "Kurgu Asistanı", icon: Sparkles },
+                  { id: "Analiz Paneli", label: "Yarış Analizi", icon: Zap },
+                  { id: "Kendi Veri Bankam", label: "Hafıza", icon: BookOpen }
                 ].map((tab) => {
                   const isActive = menu === tab.id;
                   const Icon = tab.icon;
@@ -4562,7 +4567,7 @@ export default function App() {
                                       🏟️ Saha: %{item.winner.fieldRealityRate || 88.0}
                                     </span>
                                     <span className="text-indigo-300 bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-500/30">
-                                      👥 Halk: %{item.winner.publicVoteRate || 36.0}
+                                      �� Halk: %{item.winner.publicVoteRate || 36.0}
                                     </span>
                                     <span className="text-emerald-300 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-500/30 font-black">
                                       🎯 Doğruluk: %{item.winner.accuracyProbability || 92.0}
