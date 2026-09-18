@@ -41,7 +41,6 @@ import {
   DollarSign,
   TrendingUp,
   ShieldCheck,
-  Search,
   ArrowDown,
   Cpu,
   Dna,
@@ -52,6 +51,7 @@ import { alertManager, SilentAlert } from '../services/AlertManager';
 import { ConversationalHybridBridge } from '../services/ConversationalHybridBridge';
 import { SafetyTicketValidator } from '../services/SafetyTicketValidator';
 import { ProgramDetector } from '../services/ProgramDetector';
+import { BulletinMemoryService } from '../services/BulletinMemoryService';
 
 export const DEEP_ANALYSIS_STAGES = [
   {
@@ -748,6 +748,14 @@ export default function AiChatWorkspace({
 
     if (!textToSend && imagesToSend.length === 0) return;
 
+    if (textToSend.length >= 40) {
+      BulletinMemoryService.ingest({
+        text: textToSend,
+        hipodrom: selectedHipodrom,
+        raceDate: selectedDate,
+      });
+    }
+
     // Intercept reset / tazele commands cleanly without creating user bubble spam
     const normCommand = textToSend.toUpperCase();
     if (normCommand === '!TAZELE' || normCommand === 'TAZELE' || normCommand === '!RESET' || normCommand === '!SIFIRLA' || normCommand === '!TEMIZLE') {
@@ -1161,30 +1169,6 @@ export default function AiChatWorkspace({
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* Search History Button */}
-            <button
-              onClick={() => {
-                setIsSearchOpen(prev => {
-                  const next = !prev;
-                  if (next) {
-                    setTimeout(() => searchInputRef.current?.focus(), 100);
-                  } else {
-                    setSearchQuery('');
-                  }
-                  return next;
-                });
-              }}
-              className={`px-2.5 py-1 text-xs font-medium rounded-lg border flex items-center gap-1.5 transition-colors cursor-pointer ${
-                isSearchOpen || searchQuery
-                  ? 'bg-cyan-950/60 text-cyan-300 border-cyan-700/60'
-                  : 'bg-[#1E2026] hover:bg-[#282B33] text-slate-300 border-[#2D313A]'
-              }`}
-              title="Hafızada ve Konuşmada Cümle/Kelime Ara"
-            >
-              <Search className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Hafızada Ara</span>
-            </button>
-
             <button
               onClick={handleNewChat}
               className="p-1.5 text-[#9AA0A6] hover:text-white hover:bg-[#20232B] rounded-lg transition-colors cursor-pointer"
@@ -1195,64 +1179,6 @@ export default function AiChatWorkspace({
           </div>
         </div>
 
-        {/* Expandable Search Input & Jump Controls */}
-        {isSearchOpen && (
-          <div className="flex items-center gap-2 bg-[#1A1C23] p-2 rounded-xl border border-cyan-800/40 shadow-lg animate-in fade-in slide-in-from-top-1 duration-200">
-            <Search className="w-4 h-4 text-cyan-400 shrink-0 ml-1" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Hafızadaki bir cümle, at adı, jokey veya kurguyu arayın..."
-              className="flex-1 bg-transparent text-sm text-white placeholder-slate-500 outline-none"
-            />
-
-            {searchQuery && (
-              <div className="flex items-center gap-2 text-xs font-mono text-slate-400 shrink-0">
-                {matchedMessageIds.length > 0 ? (
-                  <span className="text-cyan-300 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/50">
-                    {searchMatchIndex + 1} / {matchedMessageIds.length} Eşleşme
-                  </span>
-                ) : (
-                  <span className="text-rose-400 bg-rose-950/40 px-2 py-0.5 rounded border border-rose-900/40">
-                    Sonuç bulunamadı
-                  </span>
-                )}
-
-                {matchedMessageIds.length > 0 && (
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={handlePrevSearchMatch}
-                      className="p-1 hover:bg-[#2A2D37] text-slate-300 hover:text-white rounded border border-[#3E424D] cursor-pointer"
-                      title="Önceki Eşleşmeye Git"
-                    >
-                      <ArrowUp className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={handleNextSearchMatch}
-                      className="p-1 hover:bg-[#2A2D37] text-slate-300 hover:text-white rounded border border-[#3E424D] cursor-pointer"
-                      title="Sonraki Eşleşmeye Git"
-                    >
-                      <ArrowDown className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                setIsSearchOpen(false);
-              }}
-              className="p-1 hover:bg-[#2A2D37] text-slate-400 hover:text-white rounded cursor-pointer ml-1"
-              title="Aramayı Kapat"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
       </div>
 
       {/* 2. CHAT CONVERSATION SCROLL AREA (CLEAN MAIN SCREEN) */}
