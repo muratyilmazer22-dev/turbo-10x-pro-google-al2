@@ -260,16 +260,6 @@ export class SafetyTicketValidator {
         }
       }
 
-      // Only if NO legs were passed at all (initial mock test) do we provide fallback
-      if (sanitizedRunners.length === 0 && (!rawLegs || rawLegs.length === 0)) {
-        const legPool = (fallbackLegPool && fallbackLegPool[i]) || fallbackLegPool[0] || [];
-        legPool.forEach(f => {
-          sanitizedRunners.push({
-            ...f
-          });
-        });
-      }
-
       rawValidatedLegs.push({
         legIndex,
         raceNo,
