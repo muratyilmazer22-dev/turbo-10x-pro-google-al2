@@ -1,6 +1,8 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { execSync, exec } from 'child_process';
 import { createServer as createViteServer } from 'vite';
 import { initializeApp } from 'firebase/app';
@@ -4871,7 +4873,7 @@ VERİ AYRIŞTIRMA (PARSING) VE FİLTRELEME KURALLARI:
    - Jokey, kilo/sıklet, AGF %, ganyan oranı ve handikap puanı varsa ilgili alanlara (jokey, kilo, agf, ganyan, hp) aktar.
 
 3. ÇIKTI FORMATI:
-   Sana verilen bültendeki tüm koşuları (ayaklar����) tespit et ve sadece gerçek atları verilen JSON şemasına %100 sadık kalarak döndür.
+   Sana verilen bültendeki tüm koşuları (ayaklar������) tespit et ve sadece gerçek atları verilen JSON şemasına %100 sadık kalarak döndür.
 
 BÜLTEN METNİ:
 ${bulletinText.substring(0, 30000)}`,
@@ -5539,8 +5541,39 @@ app.get('/api/bulletins/:hipodrom', (req, res) => {
   });
 });
 
-// Rapid Non-Blocking Bulletin Parse Endpoint
-app.post('/api/bulletins/parse', async (req, res) => {
+  // Persistent bulletin memory endpoint. Service-role access stays server-side only.
+  app.post('/api/memory/bulletins', async (req, res) => {
+    try {
+      const { sourceText, hipodrom, raceDate, extractedData = {}, sourceType = 'user_bulletin' } = req.body || {};
+      if (typeof sourceText !== 'string' || sourceText.trim().length < 40) {
+        return res.status(400).json({ success: false, error: 'Geçerli bir bülten metni gereklidir.' });
+      }
+      const url = process.env.SUPABASE_URL;
+      const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !key) return res.status(503).json({ success: false, error: 'Kalıcı hafıza bağlantısı hazır değil.' });
+      const supabase = createSupabaseClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+      const source = sourceText.trim();
+      const contentHash = crypto.createHash('sha256').update(source).digest('hex');
+      const existing = await supabase.from('bulletin_memory').select('id, content_hash, created_at').eq('content_hash', contentHash).maybeSingle();
+      if (existing.error) return res.status(500).json({ success: false, error: 'Hafıza kontrolü yapılamadı.' });
+      if (existing.data) return res.json({ success: true, record: existing.data, duplicate: true });
+      const { data, error } = await supabase.from('bulletin_memory').insert({
+        source_text: source,
+        hipodrom: typeof hipodrom === 'string' ? hipodrom : null,
+        race_date: typeof raceDate === 'string' ? raceDate : null,
+        source_type: sourceType,
+        content_hash: contentHash,
+        extracted_data: extractedData,
+      }).select('id, content_hash, created_at').single();
+      if (error) return res.status(500).json({ success: false, error: 'Hafıza kaydı yapılamadı.' });
+      return res.json({ success: true, record: data, duplicate: false });
+    } catch (error) {
+      return res.status(500).json({ success: false, error: 'Hafıza servisi kullanılamıyor.' });
+    }
+  });
+
+  // Rapid Non-Blocking Bulletin Parse Endpoint
+  app.post('/api/bulletins/parse', async (req, res) => {
   try {
     const { bulletinText, hipodrom, date, programType, startRaceNum } = req.body;
     if (!bulletinText || !bulletinText.trim()) {

@@ -749,11 +749,21 @@ export default function AiChatWorkspace({
     if (!textToSend && imagesToSend.length === 0) return;
 
     if (textToSend.length >= 40) {
-      BulletinMemoryService.ingest({
+      const memoryRecord = BulletinMemoryService.ingest({
         text: textToSend,
         hipodrom: selectedHipodrom,
         raceDate: selectedDate,
       });
+      void fetch('/api/memory/bulletins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceText: textToSend,
+          hipodrom: selectedHipodrom,
+          raceDate: selectedDate,
+          extractedData: memoryRecord ? { kind: memoryRecord.kind, horses: memoryRecord.horses } : {},
+        }),
+      }).catch(() => undefined);
     }
 
     // Intercept reset / tazele commands cleanly without creating user bubble spam
@@ -1857,7 +1867,7 @@ export default function AiChatWorkspace({
                             ? '🏇 Jokey Değişti'
                             : alert.type === 'EQUIPMENT_CHANGE'
                             ? '🛡️ Takı Değişti'
-                            : '🌧️ Pist Durumu'}
+                            : '��️ Pist Durumu'}
                         </span>
 
                         <span className="text-[10px] text-slate-500 font-mono">Sessiz Log</span>
