@@ -711,8 +711,39 @@ export class AutonomousRobotOrchestrator {
   public run_learning(recentRacesCount = 20) {
     const errorLog: LearningEventRecord[] = [];
     const activeModel = Array.from(historicalDb.modelVersions.values()).find(m => m.isActive)!;
+    const verifiedResults = Array.from(historicalDb.raceResults.values()).slice(-Math.max(0, recentRacesCount));
+    if (verifiedResults.length === 0) {
+      return {
+        learningEventsProcessed: 0,
+        averageBrierScore: null,
+        identifiedWeakFactors: [],
+        strongFactors: [],
+        status: 'VERIFIED_RESULTS_REQUIRED'
+      };
+    }
 
-    // Örnek öğrenme olayı
+    const verifiedPredictionPairs = Array.from(historicalDb.predictions.values()).filter(prediction =>
+      verifiedResults.some(result => result.raceId === prediction.raceId)
+    );
+    if (verifiedPredictionPairs.length === 0) {
+      return {
+        learningEventsProcessed: 0,
+        averageBrierScore: null,
+        identifiedWeakFactors: [],
+        strongFactors: [],
+        status: 'VERIFIED_PREDICTION_PAIR_REQUIRED'
+      };
+    }
+
+    // Learning events are created only from verified prediction/result pairs.
+    return {
+      learningEventsProcessed: 0,
+      averageBrierScore: null,
+      identifiedWeakFactors: [],
+      strongFactors: [],
+      status: 'LEARNING_PIPELINE_REQUIRES_RESULT_MATCHER'
+    };
+
     const sampleEvent: LearningEventRecord = {
       id: `LRN-${Date.now()}`,
       eventId: `LRN-${Date.now()}`,
