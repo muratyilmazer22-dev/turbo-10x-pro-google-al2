@@ -234,6 +234,7 @@ export class TjkScraper {
    * TJK Web Sitesi Ulaşılamadığında veya Offline Modda Güvenli Deterministik Fallback Bülteni
    */
   public static generateStructuredMockBulletin(hipodrom: string, date: string): TjkDailyBulletin {
+    throw new Error('Mock bulletin generation is disabled. A verified TJK bulletin is required.');
     const normHip = (hipodrom || '').toUpperCase().replace(/İ/g, 'I');
     
     if (normHip.includes('BURSA') || normHip.includes('OSMANGAZI')) {
