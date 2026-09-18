@@ -68,7 +68,9 @@ export class BulletinMemoryService {
       raceDate: input.raceDate,
       horses
     };
-    HistoricalRacingDatabase.getInstance().bulletinMemory.set(record.id, record);
+    const database = HistoricalRacingDatabase.getInstance();
+    database.bulletinMemory.set(record.id, record);
+    database.promoteResultBulletin(record);
     return record;
   }
 }

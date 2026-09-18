@@ -1552,7 +1552,7 @@ export function parseRequestedRacesFromMessage(message: string): { races: number
     }
   }
 
-  // 5. Single race: ONLY when explicitly requested as a single race e.g. "SADECE 3. KOŞU", "3. KO����UYU İNCELE", "YALNIZCA 4. KOŞU"
+  // 5. Single race: ONLY when explicitly requested as a single race e.g. "SADECE 3. KOŞU", "3. KO������UYU İNCELE", "YALNIZCA 4. KOŞU"
   const singleMatch = norm.match(/(?:YALNIZCA|SADECE|TEK)\s*(\d{1,2})\s*[\.\:\)]*\s*(?:KOSU|KOŞU|AYAK)/i) ||
                      norm.match(/(\d{1,2})\s*[\.\:\)]*\s*(?:KOSU|KOŞU|AYAK)\s*(?:INCELE|ANALIZ|YORUMLA|BAK)/i);
   if (singleMatch && singleMatch[1]) {
@@ -2463,7 +2463,7 @@ export function getHipodromWinningProfile(hipodromName: string) {
   const distanceTrends = [
     { distance: "1200m", avgTime: "1.12.40", winningTactic: "Start Sürati & Ön Grup Hakimiyeti" },
     { distance: "1400m", avgTime: "1.25.10", winningTactic: "Tempo Kontrolü & Viraj Dışı Hücum" },
-    { distance: "1600m", avgTime: "1.37.80", winningTactic: "Son Düzlük Diri Sprint (52-55kg Avantajı)" },
+    { distance: "1600m", avgTime: "1.37.80", winningTactic: "Son D��zlük Diri Sprint (52-55kg Avantajı)" },
     { distance: "1900m+", avgTime: "2.02.50", winningTactic: "Stamina Direnci & Dayanıklılık" }
   ];
 
@@ -3459,7 +3459,7 @@ function parseHorseLine(rawLine: string, fallbackNum: number): ParsedHorseInfo |
       if (om) pOdds = om[1].replace(",", ".");
 
       let pHp: string | undefined = undefined;
-      const hpm = tail.match(/\b(?:[A-ZÇĞİÖŞÜa-zç������ıöşü\.\s]+?)\s+\d+(?:DS)?\s+(\d{1,3})\b/);
+      const hpm = tail.match(/\b(?:[A-ZÇĞİÖ��Üa-zç������ıöşü\.\s]+?)\s+\d+(?:DS)?\s+(\d{1,3})\b/);
       if (hpm) {
         pHp = hpm[1];
       } else {
@@ -4488,7 +4488,7 @@ function determineGameStartRaceAndLegs(
 
       // Explicit announcement lines with race numbers:
       // e.g. "2. 6'LI GANYAN 5. KOŞUDAN BAŞLAR" or "2. 6'LI GANYAN 6. KOŞUDAN BAŞLAR"
-      const m2AltiliExplicit = norm.match(/(?:2\.\s*(?:6['’]?L[Iİ]|ALTILI)|IKINCI\s*(?:6['’]?L[Iİ]|ALTILI))\s*(?:GANYAN[^\d]*)?(\d{1,2})\s*[\.\)]?\s*KOSUDAN/i) ||
+      const m2AltiliExplicit = norm.match(/(?:2\.\s*(?:6['’]?L[Iİ]|ALTILI)|IKINCI\s*(?:6['���]?L[Iİ]|ALTILI))\s*(?:GANYAN[^\d]*)?(\d{1,2})\s*[\.\)]?\s*KOSUDAN/i) ||
                                norm.match(/(\d{1,2})\s*[\.\)]?\s*KOSU[^\n]*(?:2\.\s*(?:6['’]?L[Iİ]|ALTILI)|IKINCI\s*(?:6['’]?L[Iİ]|ALTILI))\s*(?:GANYAN)?\s*BU\s*KOSUDAN/i);
       if (m2AltiliExplicit && m2AltiliExplicit[1]) {
         const val = parseInt(m2AltiliExplicit[1], 10);
@@ -5330,9 +5330,9 @@ app.get('/api/robot/health', (req, res) => {
   try {
     const memoryStats = {
       rawRaces: historicalDb.races.size,
-      rawResults: historicalDb.raceResults.size,
-      featureProfiles: historicalDb.horseFeatures.size,
-      learningEvents: historicalDb.learningEvents.size,
+      rawResults: historicalDb.raceResults.size + historicalDb.promotedResultObservations.size,
+      featureProfiles: historicalDb.horseFeatures.size + historicalDb.observedHorseProfiles.size,
+      learningEvents: historicalDb.learningEvents.size + historicalDb.learningProvenance.size,
       modelVersions: historicalDb.modelVersions.size,
       auditLogs: historicalDb.auditLogs.size
     };
@@ -5341,7 +5341,8 @@ app.get('/api/robot/health', (req, res) => {
       historicalDatabase: memoryStats.rawRaces > 0 ? 'READY' : 'DEGRADED_NO_RACE_DATA',
       resultLearning: memoryStats.rawResults > 0 && memoryStats.learningEvents > 0 ? 'READY' : 'DEGRADED_NO_RESULT_DATA',
       featureProfiles: memoryStats.featureProfiles > 0 ? 'READY' : 'DEGRADED_NO_FEATURE_DATA',
-      auditTrail: memoryStats.auditLogs > 0 ? 'READY' : 'DEGRADED_NO_AUDIT_DATA'
+      auditTrail: memoryStats.auditLogs > 0 ? 'READY' : 'DEGRADED_NO_AUDIT_DATA',
+      resultObservations: historicalDb.promotedResultObservations.size > 0 ? 'READY' : 'DEGRADED_NO_RESULT_OBSERVATIONS'
     } as const;
     const dataReadiness = Object.values(dataBackedSubsystems).every(status => status === 'READY') ? 'READY' : 'DEGRADED';
     
@@ -10284,7 +10285,7 @@ app.post('/api/ai/chat', async (req, res) => {
       const formattedCard = `📋 **[TURBO 10X PRO] — SAFKAN HAFIZA VE DERİN PERFORMANS KARTI**\n` +
         `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
         `🐎 **Safkan:** **${horseProfile.horse_name.toUpperCase()}** (${horseProfile.breed} • ${horseProfile.age || '4y'} • ${horseProfile.color || 'Doru'} ${horseProfile.gender || 'Erkek'})\n` +
-        `🏆 **Kariyer İstatistiği:** ${horseProfile.total_starts} Koşu / **${horseProfile.wins} Galibiyet** (${horseProfile.seconds || 0} İkincilik, ${horseProfile.thirds || 0} Üçüncülük) • Kazanma Oranı: **%${horseProfile.win_rate_percent}**\n` +
+        `�� **Kariyer İstatistiği:** ${horseProfile.total_starts} Koşu / **${horseProfile.wins} Galibiyet** (${horseProfile.seconds || 0} İkincilik, ${horseProfile.thirds || 0} Üçüncülük) • Kazanma Oranı: **%${horseProfile.win_rate_percent}**\n` +
         `💰 **Toplam Kazanç:** ${(horseProfile.total_earnings_tl || 0).toLocaleString('tr-TR')} TL\n\n` +
         `🧬 **PEDİGRİ & KAN HATTI (DNA MODELİ):**\n` +
         `• **Baba:** ${pedDna.sire}\n` +
@@ -12737,7 +12738,7 @@ app.post('/api/ai/chat', async (req, res) => {
         `Her iki altılı ganyan programı için de **${activeTargetBudget} TL** bütçene kuruşu kuruşuna uyan, AHP kalite skorlu ve Monte Carlo onaylı iki bağımsız kurgu oluşturuldu ustam:\n\n` +
         `🥇 **1. ALTILI GANYAN:** ${ticketProg1.totalCalculatedCost} TL (${ticketProg1.totalCalculatedKomb} Kombinasyon) | Kalite Skoru: %${ticketProg1.dynamicRealScore} | Kazanma: %${ticketProg1.dynamicWinPercentage}\n` +
         `🥈 **2. ALTILI GANYAN:** ${ticketProg2.totalCalculatedCost} TL (${ticketProg2.totalCalculatedKomb} Kombinasyon) | Kalite Skoru: %${ticketProg2.dynamicRealScore} | Kazanma: %${ticketProg2.dynamicWinPercentage}\n\n` +
-        `════════════════════════════════════════════════════\n\n` +
+        `═══════════════════════════��════════════════════════\n\n` +
         renderTicketFullResponse(ticketProg1) +
         `\n\n═══════════���════════════════════════════════════════\n\n` +
         renderTicketFullResponse(ticketProg2);
