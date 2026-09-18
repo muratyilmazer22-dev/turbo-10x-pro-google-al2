@@ -427,9 +427,17 @@ export default function App() {
     const numLegs = activeRaces.length;
     const maxComb = Math.max(1, maxAllowedCombinations);
 
-    // Ayakların Zorluk / Kolaylık Derecesi Analizi (SADECE KOŞAN ATLAR)
+    const classifyRace = (race: Race, horseCount: number) => {
+      const text = `${race.title || ''} ${race.condition || ''}`.toLocaleUpperCase('tr-TR');
+      const type = text.includes('MAIDEN') ? 'MAIDEN' : text.includes('HANDİKAP') || text.includes('HANDIKAP') ? 'HANDİKAP' : /\bKV[- ]?\d+/.test(text) ? 'KV' : /\bG[123]\b/.test(text) ? 'GRUP' : text.includes('SATIŞ') ? 'SATIŞ' : text.includes('ŞARTLI') ? 'ŞARTLI' : 'DİĞER';
+      const typeRisk = { MAIDEN: 3, HANDİKAP: 3, KV: 1, GRUP: 1, SATIŞ: 2, ŞARTLI: 2, DİĞER: 2 }[type] || 2;
+      return { type, typeRisk, surpriseOpen: type === 'MAIDEN' || type === 'HANDİKAP' || horseCount >= 12 };
+    };
+
+    // Ayakların zorluk/risk analizi: koşu türü ve alan kalabalığı, skor farkıyla birlikte değerlendirilir.
     const legDifficulties = activeRaces.map((r, legIdx) => {
       const validHorses = (r.horses || []).filter(h => !isHorseScratched(h, r.raceNo));
+      const raceProfile = classifyRace(r, validHorses.length);
       const sorted = [...validHorses].sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
       if (sorted.length <= 1) return { legIdx, gap: 20, topScore: 90, difficulty: 1, maxH: Math.max(1, sorted.length), isVerySafe: true };
       const s0 = typeof sorted[0]?.score === 'number' && !isNaN(sorted[0].score) ? sorted[0].score : 75;
@@ -438,14 +446,14 @@ export default function App() {
       const gap = Math.max(0, s0 - s1);
       const topScore = s0;
       const top4Gap = Math.max(0, s0 - s3);
-      const difficulty = Math.max(1, Math.min(10, 10 - gap + (top4Gap < 4 ? 3 : 0)));
+      const difficulty = Math.max(1, Math.min(10, 10 - gap + (top4Gap < 4 ? 3 : 0) + raceProfile.typeRisk + (raceProfile.surpriseOpen ? 1 : 0)));
       
       // Çok güvenilir banko kriteri:
       // 1. Puan farkı en az 5.0 ve lider puanı >= 86.0
       // 2. Veya lider puanı >= 89.0 ve fark >= 3.5
       // 3. Veya az atlı (<= 3 at) açık koşu
       const isVerySafe = (gap >= 5.0 && topScore >= 86.0 && difficulty <= 6) || (topScore >= 89.0 && gap >= 3.5) || (sorted.length <= 3 && gap >= 3.0);
-      return { legIdx, gap, topScore, difficulty, maxH: Math.max(1, sorted.length), isVerySafe };
+      return { legIdx, gap, topScore, difficulty, maxH: Math.max(1, sorted.length), isVerySafe, raceType: raceProfile.type, surpriseOpen: raceProfile.surpriseOpen };
     });
 
     // En net banko adaylarını tespit et (Fark ve skor bazında)
@@ -498,6 +506,8 @@ export default function App() {
               } else if (diff >= 6 && c >= 3) {
                 // Zor ve kalabalık ayakta çok at yazılması (3-4 at) ödüllendirilir
                 score += 160 * Math.min(c, 4);
+                if (legDifficulties[i].surpriseOpen && c >= 4) score += 120;
+                if (legDifficulties[i].raceType === 'GRUP' && c >= 2) score += 40;
               }
             }
 
@@ -3301,7 +3311,7 @@ export default function App() {
       return `🥇 1. ÖNCELİK (Ayağın Lideri / TEK BANKO): ${(Number(horse.score) || 80).toFixed(1)}P puan, 🎯 Doğruluk Payı: %${accuracy}. 🏟️ Saha Gerçekliği: %${fieldReality} (Ahır & Galop Zirvesi), 👥 Halkın Seçimi (AGF): %${publicVote}. ${jockeyName} tecrübesi, ${selectedHipodrom} Pist DNA Uyumu: %${dnaAffinity}. Baba ${sireName} (${sireTrait}). Anne ${damName} (${damTrait}). Gidişat: ${pace.tempo} tempoda ${pace.style} stiliyle ${pace.action} avantajına sahip.`;
     }
     if (hIdx === 0) {
-      return `🥇 1. ÖNCELİK (Ayağın Lideri): ${(Number(horse.score) || 80).toFixed(1)}P puan, 🎯 Doğruluk Payı: %${accuracy}. 🏟️ Saha Gerçekliği: %${fieldReality}, 👥 Halkın Seçimi: %${publicVote}. ${jockeyName} tecrübesi, ${selectedHipodrom} Pist DNA Uyumu: %${dnaAffinity}. Baba ${sireName} (${sireTrait}). Anne ${damName} (${damTrait}). Gidişat: ${pace.tempo} tempoda ${pace.style} stiliyle ${pace.action} avantajına sahip.`;
+      return `🥇 1. ÖNCELİK (Ayağın Lideri): ${(Number(horse.score) || 80).toFixed(1)}P puan, 🎯 Doğruluk Payı: %${accuracy}. 🏟️ Saha Gerçekliği: %${fieldReality}, 👥 Halkın Seçimi: %${publicVote}. ${jockeyName} tecrübesi, ${selectedHipodrom} Pist DNA Uyumu: %${dnaAffinity}. Baba ${sireName} (${sireTrait}). Anne ${damName} (${damTrait}). Gidişat: ${pace.tempo} tempoda ${pace.style} stiliyle ${pace.action} avantaj��na sahip.`;
     }
     if (hIdx === 1) {
       return `🥈 2. ÖNCELİK: ${eq} donanım takısı, ${jockeyName} jokey uyumu, 🎯 Doğruluk Payı: %${accuracy}, 🏟️ Saha Gerçekliği: %${fieldReality}. ${selectedHipodrom} Pist DNA: %${dnaAffinity}. Anne ${damName} (${damTrait}). Gidişat: ${pace.tempo} temponun kırılacağı son düzlükte ${pace.style} stiliyle ${pace.action} hamlesiyle favoriyi yıkabilecek birincil tehlike.`;
