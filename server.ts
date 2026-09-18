@@ -5255,6 +5255,7 @@ async function parseRacesAsync(bulletinText: string, oyunProgrami: string, custo
   }
 
   let races: InternalRace[] | null = null;
+  const parserInput = bulletinText.replace(/\s+(?=(?:\d{1,2})\s*[.)]?\s*(?:KOŞU|KOSU|AYAK)\b)/gi, '\n');
   const isCustomUserPaste = bulletinText.trim() !== TODAYS_ACTUAL_TJK_BULLETIN_TEXT.trim();
 
   // User-pasted bulletins are parsed deterministically first. AI may explain verified
@@ -5262,7 +5263,7 @@ async function parseRacesAsync(bulletinText: string, oyunProgrami: string, custo
 
   // 1. Use the deterministic block parser for the exact pasted source text.
   if (!races || races.length === 0) {
-    const localRes = parseRaces(bulletinText, oyunProgrami, customStartRace, hipodrom);
+    const localRes = parseRaces(parserInput, oyunProgrami, customStartRace, hipodrom);
     races = localRes.allRaces && localRes.allRaces.length > 0 ? localRes.allRaces : null;
   }
 
@@ -11403,7 +11404,16 @@ app.post('/api/ai/chat', async (req, res) => {
 
     if (hasFreshBulletinInput) {
       const freshSourceNorm = normalizeText(userMessage);
-      const sourceBoundRaces = storedRaces
+      let freshParsedRaces: InternalRace[] = extractedRealRaces.length > 0
+        ? extractedRealRaces
+        : (incomingUserRaces.length > 0 ? incomingUserRaces : storedRaces);
+      if (freshParsedRaces.length < 6 && userMessage) {
+        const directFreshParse = parseRaces(userMessage.replace(/\s+(?=(?:\d{1,2})\s*[.)]?\s*(?:KOŞU|KOSU|AYAK)\b)/gi, '\n'), targetProgram, undefined, targetHipodrom);
+        if (directFreshParse.allRaces.length > freshParsedRaces.length) {
+          freshParsedRaces = directFreshParse.allRaces;
+        }
+      }
+      const sourceBoundRaces = freshParsedRaces
         .map((race: any) => ({
           ...race,
           horses: (race.horses || []).filter((horse: any) => {
@@ -11460,7 +11470,7 @@ app.post('/api/ai/chat', async (req, res) => {
           return res.json({
             success: true,
             reply: `⚠️ **[EKSİK VERİ TESPİTİ — 2. ALTILI GANYAN BÜLTENİ EKSİK]**\n\n` +
-              `Ustam, sistem hafızasında yalnızca **${targetHipodrom}** hipodromunun 1. Altılı Ganyan'ına ait **1-6. Koşular** kayıtlıdır.\n\n` +
+              `Ustam, sistem haf��zasında yalnızca **${targetHipodrom}** hipodromunun 1. Altılı Ganyan'ına ait **1-6. Koşular** kayıtlıdır.\n\n` +
               `📌 **Sıf��r Tolerans & Sıfır Halüsinasyon Protokolü:** Sistem kurallarımız gereği bültende yer almayan hiçbir hayali safkanla kurgu üretilemez.\n\n` +
               `2. Altılı Ganyan için kalan koşuların (${targetHipodrom} programının son 6 koşusu) bülten metnini veya ekran görüntüsünü paylaşırsanız, gerçek safkanlar, jokeyler ve AGF oranlarıyla **${activeTargetBudget} TL** bütçenize tam uyan kurguyu anında oluşturayım.`,
             hipodrom: targetHipodrom,

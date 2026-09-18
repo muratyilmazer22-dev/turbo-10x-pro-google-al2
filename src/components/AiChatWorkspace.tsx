@@ -834,19 +834,10 @@ export default function AiChatWorkspace({
         data = JSON.parse(responseText);
       } catch (jsonErr) {
         console.warn("JSON parse error on AI response:", responseText?.slice(0, 200));
-        const localFallbackPlan = ConversationalHybridBridge.generateTicketResponse(textToSend, currentRaces, effectiveProgram);
-        const plan = localFallbackPlan.ticketPlan;
-        const validated = SafetyTicketValidator.sanitizeAndValidateLegs(
-          plan.legs,
-          plan.requestedBudgetTL || targetBudget,
-          plan.unitPriceTL || unitPrice,
-          plan.hipodrom || selectedHipodrom,
-          effectiveProgram
-        );
         data = {
-          success: true,
-          reply: validated.formattedOutput,
-          ticketPlan: plan
+          success: false,
+          reply: "Sunucudan geçerli analiz yanıtı alınamadı. Doğrulanmış bülten verisi korunarak kupon üretilmedi.",
+          ticketPlan: null
         };
       }
 
@@ -937,17 +928,7 @@ export default function AiChatWorkspace({
         let fallbackReply = "";
 
         if (isTicketReq) {
-          // Run Local Deterministic AHP & Ticket Generator directly on client
-          const localFallbackPlan = ConversationalHybridBridge.generateTicketResponse(textToSend, currentRaces, effectiveProgram);
-          const plan = localFallbackPlan.ticketPlan;
-          const validated = SafetyTicketValidator.sanitizeAndValidateLegs(
-            plan.legs,
-            plan.requestedBudgetTL || targetBudget,
-            plan.unitPriceTL || unitPrice,
-            plan.hipodrom || selectedHipodrom,
-            effectiveProgram
-          );
-          fallbackReply = validated.formattedOutput;
+          fallbackReply = "Sunucu yanıtı alınamadı. Doğrulanmış bülten verisi olmadan kupon üretilmedi.";
         } else if (isComparisonOrResult) {
           const racesToAnalyze = (currentRaces && currentRaces.length > 0 ? currentRaces.slice(0, 6) : []);
           const legDetails = racesToAnalyze.map((r: any, idx: number) => {
