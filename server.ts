@@ -4,7 +4,6 @@ import fs from 'fs';
 import crypto from 'crypto';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { execSync, exec } from 'child_process';
-import { createServer as createViteServer } from 'vite';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -5101,7 +5100,7 @@ const RESULTS_JSON_SCHEMA = {
   properties: {
     hipodrom: {
       type: "string",
-      description: "Görseldeki şehir veya hipodrom adı (Örn: ANKARA, İSTANBUL, İZMİR, KOCAELİ, ADANA vb.)"
+      description: "Görseldeki şehir veya hipodrom ad�� (Örn: ANKARA, İSTANBUL, İZMİR, KOCAELİ, ADANA vb.)"
     },
     tarih: {
       type: "string",
@@ -6835,7 +6834,7 @@ app.post('/api/memory/submit-race-results', (req, res) => {
           } else {
             // Autonomous Post-Mortem Loss Decomposition
             if (topPick && topPick.weight && (topPick.weight >= 58) && (resItem.weight && resItem.weight <= 55)) {
-              lossReason = `Kilo Duvarı: Önerilen favori ${topPick.name} (${topPick.weight}kg) ağır sıklet baskısıyla son 200'de sprintini kesti, hafif kilolu ${winner} (${resItem.weight}kg) kazandı.`;
+              lossReason = `Kilo Duvarı: ��nerilen favori ${topPick.name} (${topPick.weight}kg) ağır sıklet baskısıyla son 200'de sprintini kesti, hafif kilolu ${winner} (${resItem.weight}kg) kazandı.`;
             } else if (resItem.odds && resItem.odds > 10) {
               lossReason = `Yüksek Ganyanlı Sürpriz: ${winner} (${resItem.odds} ganyan) kaçakların erken pres savaşı sonrası arkadan gelerek kazandı.`;
             } else {
@@ -13542,7 +13541,8 @@ app.post('/api/tjk/live-sync', async (req, res) => {
 // Vite Development or Production Static Serving
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
+  const { createServer: createViteServer } = await import('vite');
+  const vite = await createViteServer({
       server: {
         middlewareMode: true,
         hmr: false,
