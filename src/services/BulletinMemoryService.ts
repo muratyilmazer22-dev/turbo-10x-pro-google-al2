@@ -54,6 +54,9 @@ function parseHorses(text: string, kind: Exclude<BulletinDocumentKind, 'BELIRSIZ
 export class BulletinMemoryService {
   public static ingest(input: { text: string; hipodrom?: string; raceDate?: string; receivedAt?: string }): BulletinMemoryRecord | null {
     const text = input.text.trim();
+    const database = HistoricalRacingDatabase.getInstance();
+    const existing = Array.from(database.bulletinMemory.values()).find((record) => record.sourceText === text);
+    if (existing) return existing;
     const kind = classifyBulletin(text);
     if (kind === 'BELIRSIZ') return null;
     const horses = parseHorses(text, kind);
@@ -68,7 +71,6 @@ export class BulletinMemoryService {
       raceDate: input.raceDate,
       horses
     };
-    const database = HistoricalRacingDatabase.getInstance();
     database.bulletinMemory.set(record.id, record);
     database.promoteResultBulletin(record);
     return record;

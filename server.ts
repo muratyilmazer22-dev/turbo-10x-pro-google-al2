@@ -31,6 +31,7 @@ import { optimizeKnapsackBudget } from "./src/services/KnapsackBudgetOptimizer.j
 import { ProgramDetector } from "./src/services/ProgramDetector.js";
 import { autonomousRobot } from "./src/services/AutonomousRobotOrchestrator.js";
 import { historicalDb } from "./src/services/HistoricalRacingDatabase.js";
+import { BulletinMemoryService } from "./src/services/BulletinMemoryService.js";
 
 // 🛡️ SUNUCU SEVİYESİ KORUMA KALKANI (SERVER CRASH GUARD)
 process.on('uncaughtException', (err) => {
@@ -1552,7 +1553,7 @@ export function parseRequestedRacesFromMessage(message: string): { races: number
     }
   }
 
-  // 5. Single race: ONLY when explicitly requested as a single race e.g. "SADECE 3. KOŞU", "3. KO������UYU İNCELE", "YALNIZCA 4. KOŞU"
+  // 5. Single race: ONLY when explicitly requested as a single race e.g. "SADECE 3. KOŞU", "3. KO��������UYU İNCELE", "YALNIZCA 4. KOŞU"
   const singleMatch = norm.match(/(?:YALNIZCA|SADECE|TEK)\s*(\d{1,2})\s*[\.\:\)]*\s*(?:KOSU|KOŞU|AYAK)/i) ||
                      norm.match(/(\d{1,2})\s*[\.\:\)]*\s*(?:KOSU|KOŞU|AYAK)\s*(?:INCELE|ANALIZ|YORUMLA|BAK)/i);
   if (singleMatch && singleMatch[1]) {
@@ -5338,13 +5339,13 @@ app.get('/api/robot/health', (req, res) => {
     };
     const activeModel = Array.from(historicalDb.modelVersions.values()).find(m => m.isActive) || Array.from(historicalDb.modelVersions.values())[0];
     const dataBackedSubsystems = {
-      historicalDatabase: memoryStats.rawRaces > 0 ? 'READY' : 'DEGRADED_NO_RACE_DATA',
-      resultLearning: memoryStats.rawResults > 0 && memoryStats.learningEvents > 0 ? 'READY' : 'DEGRADED_NO_RESULT_DATA',
+      historicalDatabase: memoryStats.rawRaces > 0 || historicalDb.promotedResultObservations.size > 0 ? 'READY' : 'DEGRADED_NO_RACE_DATA',
+      resultLearning: memoryStats.rawResults > 0 && memoryStats.learningEvents > 0 ? 'READY' : historicalDb.promotedResultObservations.size > 0 ? 'READY_FROM_RESULT_BULLETINS' : 'DEGRADED_NO_RESULT_DATA',
       featureProfiles: memoryStats.featureProfiles > 0 ? 'READY' : 'DEGRADED_NO_FEATURE_DATA',
       auditTrail: memoryStats.auditLogs > 0 ? 'READY' : 'DEGRADED_NO_AUDIT_DATA',
       resultObservations: historicalDb.promotedResultObservations.size > 0 ? 'READY' : 'DEGRADED_NO_RESULT_OBSERVATIONS'
     } as const;
-    const dataReadiness = Object.values(dataBackedSubsystems).every(status => status === 'READY') ? 'READY' : 'DEGRADED';
+    const dataReadiness = Object.values(dataBackedSubsystems).every(status => status === 'READY' || status === 'READY_FROM_RESULT_BULLETINS') ? 'READY' : 'DEGRADED';
     
     // Quick execution test on canonical tools
     const testRaceCard = autonomousRobot.get_race_card('IST-2024-05-15-R5');
@@ -5554,7 +5555,29 @@ app.get('/api/bulletins/:hipodrom', (req, res) => {
       if (category) query = query.eq('category', category);
       const { data, error } = await query;
       if (error) return res.status(500).json({ success: false, error: 'Hafıza okunamadı.' });
-      return res.json({ success: true, records: data || [] });
+
+      const { data: bulletinRows } = await supabase
+        .from('bulletin_memory')
+        .select('id, source_text, hipodrom, race_date, created_at')
+        .order('created_at', { ascending: false })
+        .limit(500);
+      for (const row of bulletinRows || []) {
+        BulletinMemoryService.ingest({
+          text: row.source_text,
+          hipodrom: row.hipodrom ?? undefined,
+          raceDate: row.race_date ?? undefined,
+          receivedAt: row.created_at
+        });
+      }
+      return res.json({
+        success: true,
+        records: data || [],
+        replay: {
+          attempted: bulletinRows?.length || 0,
+          completed: historicalDb.promotedResultObservations.size,
+          source: 'bulletin_memory'
+        }
+      });
     } catch {
       return res.status(500).json({ success: false, error: 'Hafıza servisi kullanılamıyor.' });
     }
