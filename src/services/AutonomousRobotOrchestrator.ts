@@ -260,11 +260,11 @@ export class AutonomousRobotOrchestrator {
     const scale = Math.abs(sumWeights - 1.0) < 0.001 ? 1.0 : (1.0 / sumWeights);
 
     const hpScore = Math.min(100, Math.max(20, Number(horse.hp || horse.handicap || 50)));
-    const formScore = Math.min(100, Math.max(30, (horse.form || '').includes('1') ? 92 : 72));
-    const speedRating = Math.min(100, Math.max(30, Number(horse.speedRating || 78)));
+  const formScore = (horse.form || '').trim() ? Math.min(100, Math.max(0, (horse.form || '').includes('1') ? 92 : 72)) : 0;
+  const speedRating = Number.isFinite(Number(horse.speedRating)) ? Math.min(100, Math.max(0, Number(horse.speedRating))) : 0;
     const trackScore = (raceContext.surface || '').includes('Çim') ? 80 : 75;
-    const distanceScore = 78;
-    const carriedWeight = Number(horse.weight || horse.kilo || 56);
+  const distanceScore = Number.isFinite(Number(horse.distanceScore)) ? Math.min(100, Math.max(0, Number(horse.distanceScore))) : 0;
+  const carriedWeight = Number(horse.weight || horse.kilo || 0);
     const weightScore = Math.max(30, 100 - (carriedWeight - 50) * 4.5);
     const weightChangeScore = 75;
     const jockeyScore = (horse.jockey || '').includes('KOCAKAYA') || (horse.jockey || '').includes('KARATAŞ') ? 95 : 78;
@@ -614,8 +614,8 @@ export class AutonomousRobotOrchestrator {
       unitPrice: safeUnitPrice,
       combinationCount: totalKomb,
       legs: legsResult,
-      totalEV: 1.48,
-      auditPassed: actualCost <= budget && totalKomb > 0,
+  totalEV: null,
+  auditPassed: actualCost <= budget && totalKomb > 0 && legsResult.every((leg: any) => Array.isArray(leg.chosenRunners) && leg.chosenRunners.length > 0),
       timestamp: new Date().toISOString(),
       source: 'MODEL_ENGINE',
       confidenceLevel: 'High',
