@@ -8,7 +8,7 @@
  */
 
 import { GoogleGenAI } from '@google/genai';
-import { safeJsonParse } from './networkReliability';
+import { safeJsonParse } from './networkReliability.js';
 import { QuantitativeRiskEngine, QuantitativeHorseInput, EvaluatedQuantitativeRunner } from './QuantitativeRiskEngine';
 import { ScoreCalculator } from './ScoreCalculator';
 

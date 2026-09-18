@@ -9,29 +9,29 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 import { GoogleGenAI, Type } from "@google/genai";
 import { analyzeRaceWithClaude, calculateLocalDeterministicAhp, HybridRaceAnalysisInput } from "./src/services/claudeService.js";
-import { safeJsonParse, safeFetchWithRetry } from "./src/services/networkReliability";
-import { HorseDocument, PedigreeGraphNode, SpeedRatingEntry, GallopEntry } from "./src/db/mongodbSchema";
-import { LearningFeedbackEngine, ModelPriorPrediction, RaceActualResult } from "./src/services/LearningFeedbackEngine";
-import { QuantitativeRiskEngine } from "./src/services/QuantitativeRiskEngine";
-import { TjkScraper } from "./src/services/TjkScraper";
-import { PedigreeScraper } from "./src/services/PedigreeScraper";
-import { DataMapper } from "./src/services/DataMapper";
-import { alertManager } from "./src/services/AlertManager";
-import { ConversationalHybridBridge } from "./src/services/ConversationalHybridBridge";
-import { PedigreeDnaEngine, PedigreeDnaProfile } from "./src/services/PedigreeDnaEngine";
+import { safeJsonParse, safeFetchWithRetry } from "./src/services/networkReliability.js";
+import { HorseDocument, PedigreeGraphNode, SpeedRatingEntry, GallopEntry } from "./src/db/mongodbSchema.js";
+import { LearningFeedbackEngine, ModelPriorPrediction, RaceActualResult } from "./src/services/LearningFeedbackEngine.js";
+import { QuantitativeRiskEngine } from "./src/services/QuantitativeRiskEngine.js";
+import { TjkScraper } from "./src/services/TjkScraper.js";
+import { PedigreeScraper } from "./src/services/PedigreeScraper.js";
+import { DataMapper } from "./src/services/DataMapper.js";
+import { alertManager } from "./src/services/AlertManager.js";
+import { ConversationalHybridBridge } from "./src/services/ConversationalHybridBridge.js";
+import { PedigreeDnaEngine, PedigreeDnaProfile } from "./src/services/PedigreeDnaEngine.js";
 import {
   couponVersionManager,
   runFullSystemHealthCheck,
   runFinalAuditCheck,
   modelEvolutionManager,
   executeWithFaultIsolation
-} from "./src/services/SystemStabilizationLayer";
-import { calculateDynamicAHP, calculateWeightedAHPScore, HorseMetrics } from "./src/services/AHPScoringEngine";
-import { simulatePaceCrashMonteCarlo } from "./src/services/MonteCarloPaceSimulation";
-import { optimizeKnapsackBudget } from "./src/services/KnapsackBudgetOptimizer";
-import { ProgramDetector } from "./src/services/ProgramDetector";
-import { autonomousRobot } from "./src/services/AutonomousRobotOrchestrator";
-import { historicalDb } from "./src/services/HistoricalRacingDatabase";
+} from "./src/services/SystemStabilizationLayer.js";
+import { calculateDynamicAHP, calculateWeightedAHPScore, HorseMetrics } from "./src/services/AHPScoringEngine.js";
+import { simulatePaceCrashMonteCarlo } from "./src/services/MonteCarloPaceSimulation.js";
+import { optimizeKnapsackBudget } from "./src/services/KnapsackBudgetOptimizer.js";
+import { ProgramDetector } from "./src/services/ProgramDetector.js";
+import { autonomousRobot } from "./src/services/AutonomousRobotOrchestrator.js";
+import { historicalDb } from "./src/services/HistoricalRacingDatabase.js";
 
 // 🛡️ SUNUCU SEVİYESİ KORUMA KALKANI (SERVER CRASH GUARD)
 process.on('uncaughtException', (err) => {
@@ -3460,7 +3460,7 @@ function parseHorseLine(rawLine: string, fallbackNum: number): ParsedHorseInfo |
       if (om) pOdds = om[1].replace(",", ".");
 
       let pHp: string | undefined = undefined;
-      const hpm = tail.match(/\b(?:[A-ZÇĞİÖŞÜa-zç��ıöşü\.\s]+?)\s+\d+(?:DS)?\s+(\d{1,3})\b/);
+      const hpm = tail.match(/\b(?:[A-ZÇĞİÖŞÜa-zç����ıöşü\.\s]+?)\s+\d+(?:DS)?\s+(\d{1,3})\b/);
       if (hpm) {
         pHp = hpm[1];
       } else {
@@ -10285,7 +10285,7 @@ app.post('/api/ai/chat', async (req, res) => {
         `• **En Uygun Mesafe:** ${pedDna.optimalDistance}\n` +
         `• **En Uygun Pist:** ${pedDna.optimalTrack}\n` +
         `�� **Pedigri Skoru:** ${pedDna.pedigreeScore} / 100\n` +
-        `• **Pedigri Güveni:** ${pedDna.pedigreeConfidence}\n` +
+        `�� **Pedigri Güveni:** ${pedDna.pedigreeConfidence}\n` +
         (pedDna.bloodlineConflict ? `• ${pedDna.bloodlineConflict}\n` : '') +
         `• *${pedDna.ruleApplied}*\n\n` +
         `⚡ **PİST VE MESAFE EN İYİ DERECELERİ:**\n` +
@@ -13033,7 +13033,7 @@ ${selectedLegPicks.map(p => `${p.raceNo}.koşu ${p.chosenRunners.map(h => `${h.n
             `🎯 GÖREV VE AKILLI İLİŞKİLENDİRME TALİMATLARI (LEB DEMEDEN LEBLEBİYİ ANLA):\n` +
             `1. GÖRSELLERİ TANIMA & TESPİT ETME:\n` +
             `   - Görselde KUPON / BİLET varsa: Oynanan ayakları, seçilen at numaralarını, at isimlerini, jokeyleri ve kupon bedelini tespit et.\n` +
-            `   - Görselde RESMİ SONUÇLAR / KAZANANLAR varsa: Kazanan at numarası ve adını, ganyanını, AGF sırasını, ikramiye ve dağıtılacak tutarı tespit et.\n` +
+            `   - Görselde RESMİ SONUÇLAR / KAZANANLAR varsa: Kazanan at numarası ve ad��nı, ganyanını, AGF sırasını, ikramiye ve dağıtılacak tutarı tespit et.\n` +
             `   - Görselde BÜLTEN / KOŞU KARTI varsa: Koşuları ve koşan safkanları tespit et.\n\n` +
             `2. KUPON VE SONUÇLARI BİREBİR İLİŞKİLENDİRME & KARŞILAŞTIRMA:\n` +
             `   - Eğer kullanıcının kuponundaki atlar ile resmi kazananlar varsa (veya kullanıcı "Neden kaybettik?", "Neden yattık?", "İncele" dediyse ya da HİÇBİR ŞEY YAZMADAN SADECE GÖRSEL ATTIYSA BİLE): Kupon tercihleri ile kazanan atları AYAK AYAK karşılaştır!\n` +
