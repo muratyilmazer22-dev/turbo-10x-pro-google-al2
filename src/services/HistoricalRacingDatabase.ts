@@ -359,6 +359,20 @@ export class HistoricalRacingDatabase {
   public auditLogs: Map<string, AuditLogRecord> = new Map();
   // User-provided source documents only: draft bulletins and result bulletins.
   public bulletinMemory: Map<string, BulletinMemoryRecord> = new Map();
+  // Imported Google AI Studio records remain available without inventing typed race fields.
+  public memoryArchive: Map<string, { category: string; recordKey: string; payload: unknown; importedAt: string }> = new Map();
+
+  public hydrateMemoryArchive(records: Array<{ category: string; record_key: string; payload: unknown; imported_at: string }>) {
+    for (const record of records) {
+      const key = this.generateCompositeKey(record.category, record.record_key);
+      this.memoryArchive.set(key, {
+        category: record.category,
+        recordKey: record.record_key,
+        payload: record.payload,
+        importedAt: record.imported_at,
+      });
+    }
+  }
 
   private constructor() {
     this.initializeBaselineModel();

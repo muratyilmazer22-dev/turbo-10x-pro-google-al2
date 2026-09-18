@@ -66,6 +66,7 @@ import AiChatWorkspace from './components/AiChatWorkspace';
 import QuantitativeRaceDashboard from './components/QuantitativeRaceDashboard';
 import { QuantitativeRaceAnalysisResult } from './services/QuantitativeRiskEngine';
 import { RaceActualResult } from './services/LearningFeedbackEngine';
+import { historicalDb } from './services/HistoricalRacingDatabase';
 
 // High-Performance Lazy Loading (Code Splitting): Chat loads instantly, heavy projection loads on-demand
 const LiveRaceProjection = React.lazy(() => import('./components/LiveRaceProjection'));
@@ -2897,8 +2898,16 @@ export default function App() {
       } else {
         setStatusMessage({ type: 'info', text: 'Kayıt yerel cihaz hafızasından silindi.' });
       }
-      fetchMemoryEntries();
-      fetchDbStats();
+    fetchMemoryEntries();
+    void fetch('/api/memory/archive?limit=500')
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (data?.success && Array.isArray(data.records)) {
+          historicalDb.hydrateMemoryArchive(data.records);
+        }
+      })
+      .catch(() => undefined);
+    fetchDbStats();
     } catch (err) {
       setStatusMessage({ type: 'info', text: 'Kayıt yerel cihaz hafızasından silindi.' });
     }
