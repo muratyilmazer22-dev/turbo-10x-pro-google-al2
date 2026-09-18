@@ -4013,7 +4013,7 @@ function generateDynamicTjkBulletin(hipodromName: string, dateStr?: string): str
 2 - ALATLI (58kg 4y a a SK K.TOKAÇOĞLU)
 3 - GÜMÜŞKESEN (57kg 6y k a KG K M.AKYAVUZ)
 4 - AŞIKBEY (56kg 4y k a DB SK H.ÇİZİK)
-5 - M��RAKIZI (55.5kg 5y k k KG A.ÇELİK)
+5 - M����RAKIZI (55.5kg 5y k k KG A.ÇELİK)
 6 - CEVHER (55kg 7y d a SK G.KOCAKAYA)
 7 - TÜRBOŞAH (54kg 4y k a KG H.KARATAŞ)
 
@@ -8077,7 +8077,7 @@ app.post('/api/tjk/trigger-auto-sync', (req, res) => {
   runDailyAutoSync();
   res.json({
     success: true,
-    message: "⏰ Günlük otomatik TJK şehir ve kazanan at analiz servisi başarıyla çalıştırıldı, tüm şehirler öğrenildi!",
+    message: "⏰ Günlük otomatik TJK şehir ve kazanan at analiz servisi başarıyla çal��ştırıldı, tüm şehirler öğrenildi!",
     lastSyncDate: db.last_tjk_sync_date,
     cityStats: db.city_stats
   });
@@ -9753,7 +9753,7 @@ app.post('/api/turbo/jsi', (req, res) => {
   });
 });
 
-// 3. NEGATİF GERİ BİLDİRİM & RED FLAGS APIS
+// 3. NEGATİF GERİ BİLDİR��M & RED FLAGS APIS
 app.get('/api/turbo/red-flags', (req, res) => {
   res.json({
     success: true,
@@ -12825,7 +12825,7 @@ app.post('/api/ai/chat', async (req, res) => {
      1. **Bülten Taraması:** Kazanan atı, kullanıcının daha önce sisteme yüklediği ham bülten verileri veya ekran görüntüleri arasında tek tek arayıp bulacaksın.
      2. **Ham Veri Eşleştirmesi:** Atın o bültendeki AGF oranını (%AGF), ganyanını, sıkletini (kg), jokeyini ve handikap puanını (HP) doğrudan tespit edeceksin.
      3. **Mantıksal Yorumlama:** Atın neden kazandığını veya tercihimizin neden kaybettiğini, tamamen bültendeki bu ham verilere dayanarak mantıklı ve somut bir şekilde yorumlayacaksın (Örn: "Bültende %55 AGF oranı ve 1.25 ganyanla açık favori olan X, yüksek handikap puanı ve sıklet avantajıyla koşuyu kazanarak bütçemizi saptırdı").
-     4. **Kesin Sınır:** Asla bültende geçmeyen hayali bir at, kurgusal oran veya görselde doğrulanmayan masalsı bir senaryo ("virajda sıkıştı", "jokey teşvik yapamadı" vb.) üretmeyeceksin. Yorumun tamamen elindeki somut bülten verilerine ve matematiksel oranlara dayalı olacaktır.
+     4. **Kesin Sınır:** Asla bültende geçmeyen hayali bir at, kurgusal oran veya görselde doğrulanmayan masalsı bir senaryo ("virajda sıkıştı", "jokey teşvik yapamadı" vb.) üretmeyeceksin. Yorumun tamamen elindeki somut b��lten verilerine ve matematiksel oranlara dayalı olacaktır.
 2. 🔒 **HİPODROM KİLİDİ (MUTLAK KURAL):** Kullanıcının mesajında spesifik bir hipodrom adı geçiyorsa (${targetHipodrom}), bu beyan EN ÜST DÜZEY önceliğe sahiptir. Görseldeki veya bültendeki başka şehir isimlerini KESİNLİKLE YOK SAY. Sadece ${targetHipodrom} (${targetProgram}) üzerinden konuş.
 3. 🧠 **KENDİ KENDİNE ÖĞRENME VE DERS ÇIKARMA:** Geçmiş matematiksel sapmaları kas hafızası yap. Eğer prompt içinde kayıp verisi/hata bildirimi varsa bunu anında analize yansıt ve hatadan nasıl ders çıkardığını somut AGF/oran verileriyle kullanıcıya hissettir.
 4. 💰 **BÜTÇE VE TEKNİK VERİLERİN GİZLİ ENTEGRASYONU:** 20-Parametreli AHP, Knapsack bütçe ve Track DNA verilerini sohbetin içine görünmez şekilde yedir. Bütçeyi bir matematik problemi gibi değil, "Senin ${activeTargetBudget} liralık bütçeni en iyi şekilde değerlendirmek için şu ayakları biraz geniş tuttum" şeklinde doğal bir dille ifade et.
@@ -13531,7 +13531,11 @@ app.post('/api/tjk/live-sync', async (req, res) => {
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: false,
+        watch: null,
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);
