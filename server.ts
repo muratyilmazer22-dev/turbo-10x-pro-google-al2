@@ -1191,6 +1191,26 @@ function normalizeText(text: string): string {
         .toUpperCase();
 }
 
+function sourceContainsHorseName(sourceText: string, horseName: string): boolean {
+  const compact = (value: string) => normalizeText(value).replace(/[^A-Z0-9]/g, '');
+  const source = compact(sourceText);
+  const horse = compact(horseName);
+  return horse.length >= 3 && source.includes(horse);
+}
+
+function expandCompactHorseLine(line: string): string[] {
+  const trimmed = line.trim();
+  if (!trimmed || /\b(?:KOŞU|KOSU|AYAK)\b/i.test(trimmed)) return [line];
+  const starts = [...trimmed.matchAll(/(?:^|[,;|\s])(\d{1,2})(?:[.)]|\s+)/g)]
+  .map(match => (match.index ?? 0) + (match[0].length - match[0].trimStart().length))
+  .filter((index, position, indexes) => position === 0 || index > indexes[position - 1]);
+  if (starts.length < 2) return [line];
+  return starts.map((start, index) => {
+    const end = index + 1 < starts.length ? starts[index + 1] : trimmed.length;
+    return trimmed.slice(start, end).trim().replace(/^(\d{1,2})(?=[.)]\s*|\s+)/, '$1 ');
+  }).filter(Boolean);
+}
+
 // Date Detection Helper for TJK Bulletins & Turkish Date Formats
 function detectDateFromText(text: string, fallbackDate?: string): string {
   if (!text || typeof text !== 'string') {
@@ -2039,7 +2059,7 @@ const CITY_TRACK_DNA_MAP: Record<string, {
   "PARISLONGCHAMP": {
     city: "PARISLONGCHAMP",
     hipodromName: "Hippodrome de ParisLongchamp (Fransa)",
-    trackType: "Büyük Çim & Tepe İnişi (Fausse Ligne Taktiksel Viraj)",
+    trackType: "Büyük Çim & Tepe İni����i (Fausse Ligne Taktiksel Viraj)",
     characteristics: "Longchamp'ın tepeden inişi ve 'fausse ligne' yalancı düzlüğü jokey ustalığı ve nefes dağılımı ister. Erken yürüyenler son 200m'de çöker; FRANKEL, SEA THE STARS ve GALILEO hatları zaferi belirler.",
     winningSires: [
       { name: "SEA THE STARS", powerBonus: 5.2, winRate: "%43.5", specialty: "Longchamp tepe inişi ve son 400m staminası" },
@@ -3674,7 +3694,18 @@ function parseHorseLine(rawLine: string, fallbackNum: number): ParsedHorseInfo |
     }
   }
 
-  // 3. Regex Fallback (Must strictly start with a horse number AND valid letter string)
+  // 3. Compact pasted format: `1 HORSE NAME`, optionally followed by comma/metadata.
+  // This is intentionally conservative: it only accepts a numbered line and keeps the
+  // name before known metadata markers, so unrelated prose cannot become a horse.
+  if (!name || name.length < 2) {
+    const compactHorse = rest.match(/^(?:#|\b)?(\d{1,2})\s*[.)\-:]?\s+([A-Za-zÇĞİÖŞÜçğıöşü][A-Za-zÇĞİÖŞÜçğıöşü' -]{1,80}?)(?=\s+(?:\d{1,2}y\b|\d{2}(?:[.,]\d+)?\s*kg?\b|KG\b|DB\b|AGF\b|GANYAN\b)|\s*[,;|]|$)/i);
+    if (compactHorse) {
+      num = compactHorse[1];
+      name = normalizeText(compactHorse[2].trim().replace(/[;,|]+$/, ''));
+    }
+  }
+
+  // 4. Regex Fallback (Must strictly start with a horse number AND valid letter string)
   if (!name || name.length < 2) {
     const ageMatch = rest.match(/\b(\d{1,2}y\s+[a-zçğıöşüA-ZÇĞİÖŞÜ]{1,4})\b/i);
     if (ageMatch && ageMatch.index !== undefined) {
@@ -4326,7 +4357,7 @@ function generateDynamicTjkBulletin(hipodromName: string, dateStr?: string): str
 5 - WOLF WOMEN (54kg 2y a d SK M.M.BİLGİN) [%10 AGF]
 
 9. KOŞU - 17:30 - 3 Yaşlı İngilizler, Maiden - 1400m Çim
-1 - BABA ZÜLKÜF (58kg 3y d e DB SK K.TOKAÇOĞLU) [%14 AGF]
+1 - BABA ZÜLKÜF (58kg 3y d e DB SK K.TOKA��OĞLU) [%14 AGF]
 2 - BEYOND LIMITS (58kg 3y d e KG SK N.AVCİ) [%18 AGF]
 3 - GRAND CHAMPION (58kg 3y a e SK M.KAYA) [%25 AGF]
 4 - LUCKY RUNNER (58kg 3y d e DB S.ÖZEN) [%8 AGF]
@@ -4610,7 +4641,7 @@ function determineGameStartRaceAndLegs(
 function parseRaces(bulletinText: string, oyunProgrami: string, customStartRace?: number, hipodrom?: string) {
   let textToParse = bulletinText;
   if (!textToParse || !textToParse.trim()) {
-    textToParse = TODAYS_ACTUAL_TJK_BULLETIN_TEXT;
+    return { selectedRaces: [], allRaces: [], startRaceNum: 1, totalRacesFound: 0 };
   }
 
   const lines = preprocessBulletinLines(textToParse);
@@ -4621,7 +4652,9 @@ function parseRaces(bulletinText: string, oyunProgrami: string, customStartRace?
   let currentRaceCondition = "Genel Koşu Şartı";
   let hasEncounteredFirstRace = false;
 
-  for (const line of lines) {
+  for (const rawLine of lines) {
+    const expandedLines = expandCompactHorseLine(rawLine);
+    for (const line of expandedLines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
@@ -4742,6 +4775,7 @@ function parseRaces(bulletinText: string, oyunProgrami: string, customStartRace?
         });
       }
       currentRaceHorses.push(parsed);
+    }
     }
   }
 
@@ -5223,16 +5257,10 @@ async function parseRacesAsync(bulletinText: string, oyunProgrami: string, custo
   let races: InternalRace[] | null = null;
   const isCustomUserPaste = bulletinText.trim() !== TODAYS_ACTUAL_TJK_BULLETIN_TEXT.trim();
 
-  // 1. For custom pasted text, try Gemini AI parser first if API key is available
-  if (process.env.GEMINI_API_KEY && isCustomUserPaste && bulletinText.length > 50) {
-    try {
-      races = await parseRacesWithGemini(bulletinText);
-    } catch (err) {
-      console.warn("Gemini parsing fallback triggered:", err);
-    }
-  }
+  // User-pasted bulletins are parsed deterministically first. AI may explain verified
+  // fields later, but it is never allowed to invent runners during extraction.
 
-  // 2. If Gemini didn't return valid races, use the upgraded deterministic block parser
+  // 1. Use the deterministic block parser for the exact pasted source text.
   if (!races || races.length === 0) {
     const localRes = parseRaces(bulletinText, oyunProgrami, customStartRace, hipodrom);
     races = localRes.allRaces && localRes.allRaces.length > 0 ? localRes.allRaces : null;
@@ -5243,10 +5271,15 @@ async function parseRacesAsync(bulletinText: string, oyunProgrami: string, custo
     return { selectedRaces: [], allRaces: [], startRaceNum: 1, totalRacesFound: 0 };
   }
 
-  // 4. Sanitize every race to guarantee zero hallucinations and strictly genuine horses
+  // 2. Sanitize every race and require every runner name to exist in the exact source text.
+  // This is the hard no-hallucination boundary for pasted bulletins.
+  const sourceNorm = normalizeText(bulletinText);
   const sanitizedRaces: InternalRace[] = [];
   for (const r of races) {
-    const validHorses = sanitizeAndDeduplicateRaceHorses(r.horses || []);
+    const validHorses = sanitizeAndDeduplicateRaceHorses(r.horses || []).filter((horse: any) => {
+      const horseNorm = normalizeText(String(horse.name || ''));
+      return sourceContainsHorseName(bulletinText, String(horse.name || ''));
+    });
     if (validHorses.length > 0) {
       sanitizedRaces.push({
         ...r,
@@ -7024,7 +7057,7 @@ app.post(['/api/memory', '/api/notes'], (req, res) => {
   const newNote: DBNote = {
     id: db.notes.length > 0 ? Math.max(...db.notes.map(n => n.id)) + 1 : 1,
     timestamp: new Date().toISOString(),
-    title: title && title.trim() ? title.trim() : (normHorse ? `${normHorse} Notu` : "Özel Veri Bankası Kaydı"),
+    title: title && title.trim() ? title.trim() : (normHorse ? `${normHorse} Notu` : "Özel Veri Bankas�� Kaydı"),
     content: content.trim(),
     category: category || "GENEL",
     horse_name: normHorse,
@@ -10164,7 +10197,7 @@ app.post('/api/ai/chat', async (req, res) => {
         `• **Kardeş Sinyali:** ${pedDna.siblingSignal}\n` +
         `• **En Uygun Mesafe:** ${pedDna.optimalDistance}\n` +
         `• **En Uygun Pist:** ${pedDna.optimalTrack}\n` +
-        `• **Pedigri Skoru:** ${pedDna.pedigreeScore} / 100\n` +
+        `�� **Pedigri Skoru:** ${pedDna.pedigreeScore} / 100\n` +
         `• **Pedigri Güveni:** ${pedDna.pedigreeConfidence}\n` +
         (pedDna.bloodlineConflict ? `• ${pedDna.bloodlineConflict}\n` : '') +
         `• *${pedDna.ruleApplied}*\n\n` +
@@ -10228,6 +10261,7 @@ app.post('/api/ai/chat', async (req, res) => {
       /^(?:[\=\-\*#]*\s*)?\d{1,2}\s*[\.\:\)]\s*(?:KOŞU|KOSU|AYAK)\b/im.test(userMessage) ||
       /\b\d{1,2}\s*\.\s*(?:KOŞU|KOSU|AYAK)\b/im.test(userMessage) ||
       /^(?:#|\b)?\d{1,2}\s*[\.\-\)\:\s\t]+(?:\(\d{1,2}\)\s*)?[A-Za-zÇĞİÖŞÜçğıöşü]/m.test(userMessage) ||
+  /(?:^|[\n,;])\s*\d{1,2}\s*[.)]?\s+[A-Za-zÇĞİÖŞÜçğıöşü]{2,}/m.test(userMessage) ||
       userMessage.includes("TAY / MALİ") || userMessage.includes("CALL ME") ||
       (userMessage.length > 50 && (userMessage.includes("KG") || userMessage.includes("DB") || userMessage.includes("SK") || userMessage.includes("AGF") || userMessage.includes("GANYAN") || userMessage.includes("K.TOKAÇOĞLU") || userMessage.includes("M.KAYA")))
     );
@@ -10941,6 +10975,7 @@ app.post('/api/ai/chat', async (req, res) => {
       ((userMessage.length > 150 && hasRacePointers))
     );
 
+    const hasFreshBulletinInput = hasRaceLinesInMsg || uploadedImages.length > 0;
     const isBulletinUpload = Boolean(
       hasIncomingBulletin &&
       !isExplicitTicketRequest &&
@@ -10954,7 +10989,7 @@ app.post('/api/ai/chat', async (req, res) => {
     if (isBulletinUpload) {
       let activeRaces: InternalRace[] = extractedRealRaces.length > 0
         ? extractedRealRaces
-        : (incomingUserRaces.length > 0 ? incomingUserRaces : (db.bulletins[dateKey] as any)?.races || []);
+        : (incomingUserRaces.length > 0 ? incomingUserRaces : (!hasFreshBulletinInput ? (db.bulletins[dateKey] as any)?.races || [] : []));
 
       if (activeRaces.length === 0 && userMessage.length > 100) {
         try {
@@ -10978,6 +11013,17 @@ app.post('/api/ai/chat', async (req, res) => {
         ...r,
         horses: sanitizeAndDeduplicateRaceHorses(r.horses)
       }));
+
+      if (activeRaces.length === 0) {
+        return res.json({
+          success: false,
+          reply: `🛡️ **EKSİK VERİ — ANALİZ DURDURULDU**\n\nGönderilen metinden doğrulanmış koşu ve safkan çıkarılamadı. Eski hafıza veya örnek veri kullanılmadı; mevcut hafıza korunuyor. Lütfen resmi bülteni satır satır veya görsel olarak yeniden ilet.`,
+          races: [],
+          hipodrom: targetHipodrom,
+          detectedHipodrom: targetHipodrom,
+          ticketPlan: null
+        });
+      }
 
       // Store in memory database
       db.bulletins[dateKey] = {
@@ -11176,26 +11222,26 @@ app.post('/api/ai/chat', async (req, res) => {
     // ============================================================================
     // 🎯 CASE 3: EXPLICIT TICKET REQUEST OR DEEP GEMINI / LOCAL AHP CALL
     // ============================================================================
-    let storedRaces: InternalRace[] = [];
+  let storedRaces: InternalRace[] = [];
 
-    const clientCurrentRaces = Array.isArray(req.body?.currentRaces) ? req.body.currentRaces : [];
+  const clientCurrentRaces = Array.isArray(req.body?.currentRaces) ? req.body.currentRaces : [];
 
-    if (extractedRealRaces && extractedRealRaces.length > 0) {
+  if (extractedRealRaces && extractedRealRaces.length > 0) {
       storedRaces = extractedRealRaces;
     } else if (incomingUserRaces && incomingUserRaces.length > 0) {
       storedRaces = incomingUserRaces;
-    } else if (clientCurrentRaces.length > 0 && targetProgram.includes("1. Altılı") && clientCurrentRaces.some((r: any) => Number(r.raceNo) === 1)) {
+    } else if (!hasFreshBulletinInput && clientCurrentRaces.length > 0 && targetProgram.includes("1. Altılı") && clientCurrentRaces.some((r: any) => Number(r.raceNo) === 1)) {
       storedRaces = clientCurrentRaces.map((r: any, idx: number) => ({
         raceNo: Number(r.raceNo) || (idx + 1),
         title: r.title || `${idx + 1}. Koşu`,
         condition: r.condition || 'Genel Şartlı',
         horses: sanitizeAndDeduplicateRaceHorses(r.horses || [])
       })).filter(r => r.horses.length > 0);
-    } else if ((db.bulletins[dateKey] as any)?.allRaces && (db.bulletins[dateKey] as any).allRaces.length > 0) {
+    } else if (!hasFreshBulletinInput && (db.bulletins[dateKey] as any)?.allRaces && (db.bulletins[dateKey] as any).allRaces.length > 0) {
       storedRaces = (db.bulletins[dateKey] as any).allRaces;
-    } else if ((db.bulletins[dateKey] as any)?.races && (db.bulletins[dateKey] as any).races.length > 0) {
+    } else if (!hasFreshBulletinInput && (db.bulletins[dateKey] as any)?.races && (db.bulletins[dateKey] as any).races.length > 0) {
       storedRaces = (db.bulletins[dateKey] as any).races;
-    } else if ((db.bulletins[dateKey] as any)?.content && typeof (db.bulletins[dateKey] as any).content === 'string') {
+    } else if (!hasFreshBulletinInput && (db.bulletins[dateKey] as any)?.content && typeof (db.bulletins[dateKey] as any).content === 'string') {
       try {
         const parsedResult = parseRaces((db.bulletins[dateKey] as any).content, targetProgram, undefined, targetHipodrom);
         if (parsedResult && parsedResult.allRaces && parsedResult.allRaces.length > 0) {
@@ -11212,7 +11258,7 @@ app.post('/api/ai/chat', async (req, res) => {
     }
 
     // Fallback to clientCurrentRaces if storedRaces is still empty
-    if (storedRaces.length === 0 && clientCurrentRaces.length > 0) {
+    if (!hasFreshBulletinInput && storedRaces.length === 0 && clientCurrentRaces.length > 0) {
       storedRaces = clientCurrentRaces.map((r: any, idx: number) => ({
         raceNo: Number(r.raceNo) || (idx + 1),
         title: r.title || `${idx + 1}. Koşu`,
@@ -11297,31 +11343,6 @@ app.post('/api/ai/chat', async (req, res) => {
     }
 
     if (storedRaces.length === 0) {
-      try {
-        const dynamicContent = generateDynamicTjkBulletin(targetHipodrom, targetDate);
-        if (dynamicContent && dynamicContent.length > 100) {
-          const parsedResult = parseRaces(dynamicContent, targetProgram, undefined, targetHipodrom);
-          if (parsedResult && parsedResult.allRaces && parsedResult.allRaces.length > 0) {
-            storedRaces = parsedResult.allRaces.map(r => ({
-              ...r,
-              horses: sanitizeAndDeduplicateRaceHorses(r.horses)
-            }));
-            officialBulletin = dynamicContent;
-            db.bulletins[dateKey] = {
-              content: dynamicContent,
-              races: parsedResult.selectedRaces as any,
-              allRaces: storedRaces as any,
-              updated_at: new Date().toISOString()
-            };
-            saveDB(db);
-          }
-        }
-      } catch (genErr) {
-        console.warn("Dynamic bulletin generation fallback failed:", genErr);
-      }
-    }
-
-    if (storedRaces.length === 0) {
       return res.json({
         success: true,
         reply: `🛡️ **BÜLTEN VERİSİ EKSİK / SIFIR HALÜSİNASYON PROTOKOLÜ**\n\n` +
@@ -11356,15 +11377,15 @@ app.post('/api/ai/chat', async (req, res) => {
     if (targetProgram.includes("1. Altılı") || targetProgram.includes("Birinci") || targetProgram.includes("BIRINCI") || normMsg.includes("1. ALTILI") || normMsg.includes("BIRINCI ALTILI") || normMsg.includes("1.ALTILI")) {
       const bEntry = db.bulletins[dateKey];
       if (!storedRaces.some(r => Number(r.raceNo) === 1)) {
-        if ((bEntry as any)?.allRaces && (bEntry as any).allRaces.some((r: any) => Number(r.raceNo) === 1)) {
+        if (!hasFreshBulletinInput && (bEntry as any)?.allRaces && (bEntry as any).allRaces.some((r: any) => Number(r.raceNo) === 1)) {
           storedRaces = (bEntry as any).allRaces;
-        } else if (officialBulletin && officialBulletin.length > 80) {
+        } else if (!hasFreshBulletinInput && officialBulletin && officialBulletin.length > 80) {
           const fullParsed = parseRaces(officialBulletin, "1. Altılı Ganyan", undefined, targetHipodrom);
           if (fullParsed.allRaces && fullParsed.allRaces.some((r: any) => Number(r.raceNo) === 1)) {
             storedRaces = fullParsed.allRaces;
           }
         }
-        if (!storedRaces.some(r => Number(r.raceNo) === 1)) {
+        if (!hasFreshBulletinInput && !storedRaces.some(r => Number(r.raceNo) === 1)) {
           const dynamicContent = generateDynamicTjkBulletin(targetHipodrom, targetDate);
           const fullParsed = parseRaces(dynamicContent, "1. Altılı Ganyan", undefined, targetHipodrom);
           if (fullParsed.allRaces && fullParsed.allRaces.some((r: any) => Number(r.raceNo) === 1)) {
@@ -11378,6 +11399,31 @@ app.post('/api/ai/chat', async (req, res) => {
           }
         }
       }
+    }
+
+    if (hasFreshBulletinInput) {
+      const freshSourceNorm = normalizeText(userMessage);
+      const sourceBoundRaces = storedRaces
+        .map((race: any) => ({
+          ...race,
+          horses: (race.horses || []).filter((horse: any) => {
+            const name = normalizeText(String(horse.name || ''));
+            return sourceContainsHorseName(userMessage, String(horse.name || ''));
+          })
+        }))
+        .filter((race: any) => race.horses.length > 0);
+      const isSixLegRequest = /altılı|altisi|altılı/.test(normalizeText(targetProgram)) || /altılı|altisi|altılı/.test(normalizeText(userMessage));
+      if (sourceBoundRaces.length === 0 || (isSixLegRequest && sourceBoundRaces.length < 6)) {
+        return res.json({
+          success: false,
+          reply: `🛡️ **EKSİK VERİ — ANALİZ DURDURULDU**\\n\\nYeni bültendeki koşu ve safkanlar kaynak metinle doğrulanamadı. Eski hafıza veya örnek veri kullanılmadı; kupon üretilmedi.`,
+          races: [],
+          hipodrom: targetHipodrom,
+          detectedHipodrom: targetHipodrom,
+          ticketPlan: null
+        });
+      }
+      storedRaces = sourceBoundRaces;
     }
 
     // Conversely, if targetProgram is 2. Altılı Ganyan and storedRaces only contains early races, reload full bulletin
@@ -11415,7 +11461,7 @@ app.post('/api/ai/chat', async (req, res) => {
             success: true,
             reply: `⚠️ **[EKSİK VERİ TESPİTİ — 2. ALTILI GANYAN BÜLTENİ EKSİK]**\n\n` +
               `Ustam, sistem hafızasında yalnızca **${targetHipodrom}** hipodromunun 1. Altılı Ganyan'ına ait **1-6. Koşular** kayıtlıdır.\n\n` +
-              `📌 **Sıfır Tolerans & Sıfır Halüsinasyon Protokolü:** Sistem kurallarımız gereği bültende yer almayan hiçbir hayali safkanla kurgu üretilemez.\n\n` +
+              `📌 **Sıf��r Tolerans & Sıfır Halüsinasyon Protokolü:** Sistem kurallarımız gereği bültende yer almayan hiçbir hayali safkanla kurgu üretilemez.\n\n` +
               `2. Altılı Ganyan için kalan koşuların (${targetHipodrom} programının son 6 koşusu) bülten metnini veya ekran görüntüsünü paylaşırsanız, gerçek safkanlar, jokeyler ve AGF oranlarıyla **${activeTargetBudget} TL** bütçenize tam uyan kurguyu anında oluşturayım.`,
             hipodrom: targetHipodrom,
             programType: targetProgram,
@@ -11906,7 +11952,7 @@ app.post('/api/ai/chat', async (req, res) => {
         } else if (synergyMatch && synergyMatch.isSecretWeapon) {
           insight = `🤝 [JSI SİNERJİ ZİRVESİ]: ${h.jockey} & ${h.trainer} ortaklığı (%${synergyMatch.winRate} Galibiyet, +${synergyMatch.synergyScore}P Sinerji Katkısı).`;
         } else if (isLikelyFrontRunner && weightVal <= 54.5) {
-          insight = "🚀 Yüksek Erken Hız (Early Pace) ve hafif kilo avantajıyla önde boş kalıp yarışı bitirebilecek yüksek potansiyelli sürpriz bomba.";
+          insight = "���� Yüksek Erken Hız (Early Pace) ve hafif kilo avantajıyla önde boş kalıp yarışı bitirebilecek yüksek potansiyelli sürpriz bomba.";
         } else if (agfVal >= 30 || oddsVal <= 2.5) {
           insight = "Grup içinde belirgin form üstünlüğü ve son 400m sprint hakimiyeti.";
         } else if (calculatedEv >= 1.25) {
@@ -12518,7 +12564,7 @@ app.post('/api/ai/chat', async (req, res) => {
           `  • **Baba:** ${ped.sire}\n` +
           `  • **Anne:** ${ped.dam}\n` +
           `  • **Anne-Baba:** ${ped.damSire}\n` +
-          `  • **Baba Hattı:** ${ped.sireLine}\n` +
+          `  ��� **Baba Hattı:** ${ped.sireLine}\n` +
           `  • **Anne Hattı:** ${ped.damLine}\n` +
           `  • **Kardeş Sinyali:** ${ped.siblingSignal}\n` +
           `  • **En Uygun Mesafe:** ${ped.optimalDistance}\n` +
@@ -12562,7 +12608,7 @@ app.post('/api/ai/chat', async (req, res) => {
         `🥈 **2. ALTILI GANYAN:** ${ticketProg2.totalCalculatedCost} TL (${ticketProg2.totalCalculatedKomb} Kombinasyon) | Kalite Skoru: %${ticketProg2.dynamicRealScore} | Kazanma: %${ticketProg2.dynamicWinPercentage}\n\n` +
         `════════════════════════════════════════════════════\n\n` +
         renderTicketFullResponse(ticketProg1) +
-        `\n\n════════════════════════════════════════════════════\n\n` +
+        `\n\n═══════════���════════════════════════════════════════\n\n` +
         renderTicketFullResponse(ticketProg2);
     }
     return renderTicketFullResponse(primaryTicket);

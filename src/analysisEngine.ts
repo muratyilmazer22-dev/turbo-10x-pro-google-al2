@@ -1289,7 +1289,9 @@ function parseClientHorseLine(rawLine: string, fallbackNum: number) {
   return { num, name, jockey, trainer, equipments, statusNote, sire, dam, weight, isScratched: isScratchedHorse };
 }
 
-export function getDynamicTjkBulletinText(hipodromName: string = "BURSA", dateStr?: string): string {
+export function getDynamicTjkBulletinText(hipodromName: string = "", dateStr?: string): string {
+  // Historical/demo bulletin generation is intentionally disabled. Only supplied or live data is valid.
+  return "";
   const normH = normalizeText(hipodromName) || "BURSA";
   let formattedDate = "20.08.2026";
   if (dateStr) {
@@ -1907,9 +1909,22 @@ export function determineClientGameStartRaceAndLegs(
 export function analyzeBulletinClientSide(bulletinText: string, oyunProgrami: string = "1. Altılı Ganyan", hipodrom: string = "GENEL", selectedDate?: string, customStartRace?: number): ClientAnalysisResult {
   const normHip = normalizeText(hipodrom);
   const targetDateStr = selectedDate || new Date().toISOString().split('T')[0];
-  let textToParse = (bulletinText || "").trim();
+  const textToParse = (bulletinText || "").trim();
   if (!textToParse) {
-    textToParse = TODAYS_ACTUAL_TJK_BULLETIN_TEXT;
+    return {
+      races: [],
+      startRaceNum: 1,
+      totalRacesFound: 0,
+      hipodrom: normHip,
+      programType: oyunProgrami,
+      aiOverview: {
+        engineVersion: 'verified-data-only',
+        totalMemoryMatches: 0,
+        bestBanko: 'VERİ YOK',
+        bankoList: [],
+        surpriseList: []
+      }
+    };
   }
 
   const lines = textToParse.split('\n');

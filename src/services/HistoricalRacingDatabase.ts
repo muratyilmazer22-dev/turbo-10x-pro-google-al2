@@ -16,6 +16,8 @@
 
 export type ConfidenceLevel = 'High' | 'Medium' | 'Low';
 
+import type { BulletinMemoryRecord } from './BulletinMemoryService';
+
 export interface BaseRecord {
   id: string;
   timestamp: string; // ISO String (Örn: "2024-05-12T14:30:00Z")
@@ -355,6 +357,8 @@ export class HistoricalRacingDatabase {
   public modelVersions: Map<string, ModelVersionRecord> = new Map();
   public coupons: Map<string, OptimizedCouponRecord> = new Map();
   public auditLogs: Map<string, AuditLogRecord> = new Map();
+  // User-provided source documents only: draft bulletins and result bulletins.
+  public bulletinMemory: Map<string, BulletinMemoryRecord> = new Map();
 
   private constructor() {
     this.initializeBaselineModel();
@@ -373,6 +377,15 @@ export class HistoricalRacingDatabase {
    */
   public generateCompositeKey(...parts: (string | number)[]): string {
     return parts.map(p => String(p).trim().toUpperCase()).join('::');
+  }
+
+  public getBulletinMemory(kind?: BulletinMemoryRecord['kind']): BulletinMemoryRecord[] {
+    const records = Array.from(this.bulletinMemory.values());
+    return kind ? records.filter((record) => record.kind === kind) : records;
+  }
+
+  public getResultLearningMemory(): BulletinMemoryRecord[] {
+    return this.getBulletinMemory('SONUCLU_BULTENI');
   }
 
   /**

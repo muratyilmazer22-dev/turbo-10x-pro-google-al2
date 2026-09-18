@@ -27,6 +27,8 @@ import { ProgramDetector } from './ProgramDetector';
  */
 
 export function getFullTjkBulletinForHipodrom(hipodromName: string, dateStr?: string): string {
+  // This provider previously returned fabricated racecards. Live/supplied bulletins only.
+  return "";
   const normH = ProgramDetector.normalizeText(hipodromName || "İSTANBUL");
   let formattedDate = dateStr || "17.09.2026";
   if (formattedDate.includes("-")) {
@@ -277,7 +279,7 @@ export function getFullTjkBulletinForHipodrom(hipodromName: string, dateStr?: st
 5 - COASTAL BREEZE (53kg 4y d k DB H.ÇİZİK) [%5 AGF] [Gny: 17.00]
 6 - WIND FIGHTER (51kg 3y d e SK N.AVCI) [%3 AGF] [Gny: 30.00]
 
-10. KOŞU - 19:00 - 4 ve Yukarı Araplar, Şartlı 3/DHÖW - 1600m Sentetik
+10. KOŞU - 19:00 - 4 ve Yukarı Araplar, Şartlı 3/DH��W - 1600m Sentetik
 1 - TOROS ŞAHI (60kg 6y k a KG DB V.ABİŞ) [%36 AGF] [Gny: 2.00]
 2 - AKDENİZ BEYİ (58kg 5y a a SK G.KOCAKAYA) [%26 AGF] [Gny: 3.00]
 3 - KAFKAS YILDIZI (57kg 4y k k KG SK M.KAYA) [%18 AGF] [Gny: 4.80]

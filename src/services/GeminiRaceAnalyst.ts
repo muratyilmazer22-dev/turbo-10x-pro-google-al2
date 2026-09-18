@@ -40,9 +40,9 @@ export class GeminiRaceAnalyst {
     if (!ai) {
       return {
         hipodrom,
-        raceDate: new Date().toISOString().split('T')[0],
-        racesCount: 6,
-        extractedTextSummary: 'Yerel TJK bülten ayrıştırma kullanıldı.',
+        raceDate: '',
+        racesCount: 0,
+        extractedTextSummary: 'Gemini erişimi yok; doğrulanmış yapılandırılmış bülten bekleniyor.',
         parsedRaces: []
       };
     }
@@ -70,9 +70,9 @@ ${rawText.slice(0, 8000)}`,
       console.warn('[GeminiRaceAnalyst] Gemini bülten ayrıştırma hatası:', err.message);
       return {
         hipodrom,
-        raceDate: new Date().toISOString().split('T')[0],
-        racesCount: 6,
-        extractedTextSummary: 'Hata durumunda yerel bülten ayrıştırıcı devrede.',
+        raceDate: '',
+        racesCount: 0,
+        extractedTextSummary: 'Bülten ayrıştırılamadı; analiz durduruldu.',
         parsedRaces: []
       };
     }

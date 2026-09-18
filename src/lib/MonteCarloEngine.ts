@@ -158,8 +158,8 @@ export function runMonteCarloRaceSimulation(
 
   // 3. HER AT İÇİN BİREYSEL GÜÇ İNDEKSİ (POWER RATING) HESAPLAMA
   const horseRatings = activeHorses.map(h => {
-    const hp = h.handicap || 70;
-    const weight = h.weight || 56;
+    const hp = Number.isFinite(h.handicap) ? Number(h.handicap) : 0;
+    const weight = Number.isFinite(h.weight) ? Number(h.weight) : 56;
     const sire = (h.sire || '').toUpperCase();
     const dam = (h.dam || '').toUpperCase();
     const agf = h.agfPercent || 15;
@@ -289,7 +289,9 @@ export function runMonteCarloRaceSimulation(
     if (sireInfo) {
       pedigreeVerdict = `${sire} yavrusu olması ${config.trackType} pist için büyük avantajdır. ${sireInfo.description}`;
     } else {
-      pedigreeVerdict = `${sire} ve ${dam} kan hattı ${config.distance}m mesafede dengeli bir performans sunar.`;
+      pedigreeVerdict = sire === 'BİLİNMİYOR' && dam === 'BİLİNMİYOR'
+        ? 'Pedigri verisi yok; bu parametre skora dahil edilmedi.'
+        : `${sire} ve ${dam} kan hattı için doğrulanmış eşleşme bulunamadı; pedigri bonusu uygulanmadı.`;
     }
 
     const weightVal = hr.horse.weight || 56;

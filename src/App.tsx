@@ -151,7 +151,7 @@ export default function App() {
 
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 1000);
+    }, 60000);
     return () => {
       clearInterval(timer);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -220,7 +220,6 @@ export default function App() {
   const [showTechnicalPanels, setShowTechnicalPanels] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'kurgu' | 'table' | 'cards'>('kurgu');
   const [expandedLegs, setExpandedLegs] = useState<Record<number, boolean>>({});
-  const [autoSaveWinnersToMemory, setAutoSaveWinnersToMemory] = useState<boolean>(true);
   const [equivalentAnalysis, setEquivalentAnalysis] = useState<EquivalentAnalysisItem[]>([]);
   const [showQuickTrain, setShowQuickTrain] = useState<boolean>(false);
 
@@ -408,42 +407,6 @@ export default function App() {
         : `✅ #${horse.no} ${horse.horseName} KOŞAR olarak işaretlendi ve kurgulara dahil edildi!`
     });
   }, [getHorseUniqueKey, isHorseScratched]);
-
-  // Canlı TJK Çıkan / Koşmayan Atları Gerçek Zamanlı Otomatik Takip & Senkronizasyon
-  useEffect(() => {
-    let isMounted = true;
-
-    const checkLiveWithdrawnHorses = async () => {
-      try {
-        const res = await fetch(`/api/tjk/live-withdrawn-horses?hipodrom=${encodeURIComponent(selectedHipodrom)}&date=${encodeURIComponent(selectedDate)}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data && data.withdrawnHorses && data.withdrawnHorses.length > 0 && isMounted) {
-          setManualScratchedHorses(prev => {
-            const next = { ...prev };
-            let changed = false;
-            for (const wh of data.withdrawnHorses) {
-              const key = getHorseUniqueKey(wh.raceNo, String(wh.horseNo), wh.horseName);
-              if (next[key] !== true) {
-                next[key] = true;
-                changed = true;
-              }
-            }
-            return changed ? next : prev;
-          });
-        }
-      } catch (err) {
-        // Silently keep polling
-      }
-    };
-
-    checkLiveWithdrawnHorses();
-    const interval = setInterval(checkLiveWithdrawnHorses, 20000); // 20 saniyede bir canlı TJK kontrolü
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
-  }, [selectedHipodrom, selectedDate, getHorseUniqueKey]);
 
   // 5'li Ganyan Telafi / Devam Modu için Aktif Koşular (1. Ayak Yattığında 2. Koşudan Başlar)
   const activeRaces = useMemo(() => {
@@ -2512,11 +2475,6 @@ export default function App() {
           type: 'success',
           text: `🎯 [CANLI VERİ ÇEKİLDİ - ${nowTimeStr}] ${effectiveHipodrom} - ${activeProgram} için ${data.races.length} koşu ve ${totalH} at Canlı TJK Motoruyla başarıyla işlendi!`
         });
-        if (autoSaveWinnersToMemory) {
-          setTimeout(() => {
-            handleAutoSaveWinnersToMemory(data.races);
-          }, 300);
-        }
       } else {
         // Client-side fallback engine for Vercel / static / offline
         const fallbackResult = analyzeBulletinClientSide(textToAnalyze, activeProgram, effectiveHipodrom, selectedDate, activeStartRace || undefined);
@@ -5660,25 +5618,7 @@ export default function App() {
                       />
                     </label>
 
-                    <button
-                      type="button"
-                      onClick={() => handleAutoSaveWinnersToMemory()}
-                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black border border-amber-400 px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 cursor-pointer min-h-[38px] shadow-md shadow-amber-500/20"
-                      title="Analiz edilen TJK günlük kazanan ve favori atlarının 20-Parametre değerlerini hafıza bankasına kaydet"
-                    >
-                      <Trophy className="w-3.5 h-3.5 text-slate-950" />
-                      <span>🏆 Kazanan Atları 20-Parametresiyle Hafızaya Ekle</span>
-                    </button>
 
-                    <label className="flex items-center gap-2 bg-[#2A2D35] px-3 py-1.5 rounded-lg text-xs font-bold text-amber-400 border border-amber-500/30 min-h-[38px] cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={autoSaveWinnersToMemory}
-                        onChange={(e) => setAutoSaveWinnersToMemory(e.target.checked)}
-                        className="rounded border-[#3A3D45] text-amber-500 focus:ring-amber-500"
-                      />
-                      <span>⚡ Analiz Sonrası Otomatik Kaydet</span>
-                    </label>
                   </div>
                 </div>
 
