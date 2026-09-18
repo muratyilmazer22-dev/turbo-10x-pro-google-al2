@@ -359,6 +359,9 @@ export class HistoricalRacingDatabase {
   public auditLogs: Map<string, AuditLogRecord> = new Map();
   // User-provided source documents only: draft bulletins and result bulletins.
   public bulletinMemory: Map<string, BulletinMemoryRecord> = new Map();
+  public promotedResultObservations: Map<string, { id: string; bulletinId: string; horseName: string; finishPosition: number; source: 'USER_RESULT_BULLETIN'; observedAt: string }> = new Map();
+  public observedHorseProfiles: Map<string, { horseName: string; starts: number; wins: number; top3: number; source: 'USER_RESULT_BULLETIN'; updatedAt: string }> = new Map();
+  public learningProvenance: Map<string, { id: string; bulletinId: string; event: 'RESULT_BULLETIN_PROMOTED'; source: 'USER_RESULT_BULLETIN'; createdAt: string }> = new Map();
   // Imported Google AI Studio records remain available without inventing typed race fields.
   public memoryArchive: Map<string, { category: string; recordKey: string; payload: unknown; importedAt: string }> = new Map();
 
@@ -400,8 +403,46 @@ export class HistoricalRacingDatabase {
   }
 
   public getResultLearningMemory(): BulletinMemoryRecord[] {
-    return this.getBulletinMemory('SONUCLU_BULTENI');
+  return this.getBulletinMemory('SONUCLU_BULTENI');
   }
+
+  public promoteResultBulletin(record: BulletinMemoryRecord): void {
+    if (record.kind !== 'SONUCLU_BULTENI') return;
+    const observedAt = record.receivedAt;
+    for (const horse of record.horses) {
+      if (!horse.finishPosition) continue;
+      const observationId = `${record.id}:${horse.name}:${horse.finishPosition}`;
+      this.promotedResultObservations.set(observationId, {
+        id: observationId,
+        bulletinId: record.id,
+        horseName: horse.name,
+        finishPosition: horse.finishPosition,
+        source: 'USER_RESULT_BULLETIN',
+        observedAt
+      });
+      const current = this.observedHorseProfiles.get(horse.name) ?? {
+        horseName: horse.name,
+        starts: 0,
+        wins: 0,
+        top3: 0,
+        source: 'USER_RESULT_BULLETIN' as const,
+        updatedAt: observedAt
+      };
+      current.starts += 1;
+      if (horse.finishPosition === 1) current.wins += 1;
+      if (horse.finishPosition <= 3) current.top3 += 1;
+      current.updatedAt = observedAt;
+      this.observedHorseProfiles.set(horse.name, current);
+    }
+    this.learningProvenance.set(record.id, {
+      id: record.id,
+      bulletinId: record.id,
+      event: 'RESULT_BULLETIN_PROMOTED',
+      source: 'USER_RESULT_BULLETIN',
+      createdAt: observedAt
+    });
+  }
+
 
   /**
    * 5. VERİ SIZINTISI KORUMASI (Point-in-Time Leakage Protection)
