@@ -1201,9 +1201,9 @@ function sourceContainsHorseName(sourceText: string, horseName: string): boolean
 function expandCompactHorseLine(line: string): string[] {
   const trimmed = line.trim();
   if (!trimmed || /\b(?:KOŞU|KOSU|AYAK)\b/i.test(trimmed)) return [line];
-  const starts = [...trimmed.matchAll(/(?:^|\s)(\d{1,2})(?:[.)]|\s+)/g)]
-    .map(match => match.index ?? 0)
-    .filter((index, position, indexes) => position === 0 || index > indexes[position - 1]);
+  const starts = [...trimmed.matchAll(/(?:^|[,;|\s])(\d{1,2})(?:[.)]|\s+)/g)]
+  .map(match => (match.index ?? 0) + (match[0].length - match[0].trimStart().length))
+  .filter((index, position, indexes) => position === 0 || index > indexes[position - 1]);
   if (starts.length < 2) return [line];
   return starts.map((start, index) => {
     const end = index + 1 < starts.length ? starts[index + 1] : trimmed.length;
@@ -3694,7 +3694,18 @@ function parseHorseLine(rawLine: string, fallbackNum: number): ParsedHorseInfo |
     }
   }
 
-  // 3. Regex Fallback (Must strictly start with a horse number AND valid letter string)
+  // 3. Compact pasted format: `1 HORSE NAME`, optionally followed by comma/metadata.
+  // This is intentionally conservative: it only accepts a numbered line and keeps the
+  // name before known metadata markers, so unrelated prose cannot become a horse.
+  if (!name || name.length < 2) {
+    const compactHorse = rest.match(/^(?:#|\b)?(\d{1,2})\s*[.)\-:]?\s+([A-Za-zÇĞİÖŞÜçğıöşü][A-Za-zÇĞİÖŞÜçğıöşü' -]{1,80}?)(?=\s+(?:\d{1,2}y\b|\d{2}(?:[.,]\d+)?\s*kg?\b|KG\b|DB\b|AGF\b|GANYAN\b)|\s*[,;|]|$)/i);
+    if (compactHorse) {
+      num = compactHorse[1];
+      name = normalizeText(compactHorse[2].trim().replace(/[;,|]+$/, ''));
+    }
+  }
+
+  // 4. Regex Fallback (Must strictly start with a horse number AND valid letter string)
   if (!name || name.length < 2) {
     const ageMatch = rest.match(/\b(\d{1,2}y\s+[a-zçğıöşüA-ZÇĞİÖŞÜ]{1,4})\b/i);
     if (ageMatch && ageMatch.index !== undefined) {
@@ -11941,7 +11952,7 @@ app.post('/api/ai/chat', async (req, res) => {
         } else if (synergyMatch && synergyMatch.isSecretWeapon) {
           insight = `🤝 [JSI SİNERJİ ZİRVESİ]: ${h.jockey} & ${h.trainer} ortaklığı (%${synergyMatch.winRate} Galibiyet, +${synergyMatch.synergyScore}P Sinerji Katkısı).`;
         } else if (isLikelyFrontRunner && weightVal <= 54.5) {
-          insight = "🚀 Yüksek Erken Hız (Early Pace) ve hafif kilo avantajıyla önde boş kalıp yarışı bitirebilecek yüksek potansiyelli sürpriz bomba.";
+          insight = "���� Yüksek Erken Hız (Early Pace) ve hafif kilo avantajıyla önde boş kalıp yarışı bitirebilecek yüksek potansiyelli sürpriz bomba.";
         } else if (agfVal >= 30 || oddsVal <= 2.5) {
           insight = "Grup içinde belirgin form üstünlüğü ve son 400m sprint hakimiyeti.";
         } else if (calculatedEv >= 1.25) {
