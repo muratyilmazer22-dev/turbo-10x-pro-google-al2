@@ -1552,7 +1552,7 @@ export function parseRequestedRacesFromMessage(message: string): { races: number
     }
   }
 
-  // 5. Single race: ONLY when explicitly requested as a single race e.g. "SADECE 3. KOŞU", "3. KOŞUYU İNCELE", "YALNIZCA 4. KOŞU"
+  // 5. Single race: ONLY when explicitly requested as a single race e.g. "SADECE 3. KOŞU", "3. KO��UYU İNCELE", "YALNIZCA 4. KOŞU"
   const singleMatch = norm.match(/(?:YALNIZCA|SADECE|TEK)\s*(\d{1,2})\s*[\.\:\)]*\s*(?:KOSU|KOŞU|AYAK)/i) ||
                      norm.match(/(\d{1,2})\s*[\.\:\)]*\s*(?:KOSU|KOŞU|AYAK)\s*(?:INCELE|ANALIZ|YORUMLA|BAK)/i);
   if (singleMatch && singleMatch[1]) {
@@ -3459,7 +3459,7 @@ function parseHorseLine(rawLine: string, fallbackNum: number): ParsedHorseInfo |
       if (om) pOdds = om[1].replace(",", ".");
 
       let pHp: string | undefined = undefined;
-      const hpm = tail.match(/\b(?:[A-ZÇĞİÖŞÜa-zç����ıöşü\.\s]+?)\s+\d+(?:DS)?\s+(\d{1,3})\b/);
+      const hpm = tail.match(/\b(?:[A-ZÇĞİÖŞÜa-zç������ıöşü\.\s]+?)\s+\d+(?:DS)?\s+(\d{1,3})\b/);
       if (hpm) {
         pHp = hpm[1];
       } else {
@@ -8088,7 +8088,7 @@ app.post('/api/tjk/trigger-auto-sync', (req, res) => {
   runDailyAutoSync();
   res.json({
     success: true,
-    message: "⏰ Günlük otomatik TJK şehir ve kazanan at analiz servisi başarıyla çal��ştırıldı, tüm şehirler öğrenildi!",
+    message: "⏰ Günlük otomatik TJK şehir ve kazanan at analiz servisi başarıyla çal��şt��rıldı, tüm şehirler öğrenildi!",
     lastSyncDate: db.last_tjk_sync_date,
     cityStats: db.city_stats
   });
@@ -13540,18 +13540,7 @@ app.post('/api/tjk/live-sync', async (req, res) => {
 
 // Vite Development or Production Static Serving
 async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
-  const { createServer: createViteServer } = await import('vite');
-  const vite = await createViteServer({
-      server: {
-        middlewareMode: true,
-        hmr: false,
-        watch: null,
-      },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
+  {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
