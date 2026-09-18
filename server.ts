@@ -8,7 +8,7 @@ import { createServer as createViteServer } from 'vite';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 import { GoogleGenAI, Type } from "@google/genai";
-import { analyzeRaceWithClaude, calculateLocalDeterministicAhp, HybridRaceAnalysisInput } from "./src/services/claudeService";
+import { analyzeRaceWithClaude, calculateLocalDeterministicAhp, HybridRaceAnalysisInput } from "./src/services/claudeService.js";
 import { safeJsonParse, safeFetchWithRetry } from "./src/services/networkReliability";
 import { HorseDocument, PedigreeGraphNode, SpeedRatingEntry, GallopEntry } from "./src/db/mongodbSchema";
 import { LearningFeedbackEngine, ModelPriorPrediction, RaceActualResult } from "./src/services/LearningFeedbackEngine";
@@ -6358,7 +6358,7 @@ app.post('/api/analyze', async (req, res) => {
     optimalWeightRange: cityProfile.optimalWeightRange
   } : undefined;
 
-  // 💾 HAFIZAYA OTOMATİK KURGU KAYDI (TICKET PERSISTENCE)
+  // �� HAFIZAYA OTOMATİK KURGU KAYDI (TICKET PERSISTENCE)
   try {
     const totalKomb = raceResults.reduce((acc, r) => acc * Math.max(1, r.horses.slice(0, 4).length), 1);
     const unitPrice = 1.25;
@@ -11870,7 +11870,7 @@ app.post('/api/ai/chat', async (req, res) => {
 
           if (weightDropped || hasEliteJockey) {
             score += 18; // Ganyan Avcısı Fırsat Puanı
-            ganyanAvcisiInsight = `💡 GANYAN AVCISI FIRSATI: Geçmiş olumsuz koşu şartları bugün lehine döndü (${weightVal}kg / ${h.jockey}). Geçmiş yenilgi engel değil, yüksek ganyan fırsatıdır!`;
+            ganyanAvcisiInsight = `💡 GANYAN AVCISI FIRSATI: Geçmiş olumsuz koşu şartları bugün lehine döndü (${weightVal}kg / ${h.jockey}). Ge��miş yenilgi engel değil, yüksek ganyan fırsatıdır!`;
           } else {
             redFlags.forEach(rf => {
               score += (rf.penaltyPoints || -15);
