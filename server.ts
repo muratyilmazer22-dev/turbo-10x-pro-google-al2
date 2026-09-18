@@ -119,26 +119,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Google Firebase Firestore Initialization
-let dbFirestore: any = null;
-let firebaseProjectInfo: any = null;
-
-try {
-  const firebaseConfigPath = path.join(process.cwd(), 'firebase-applet-config.json');
-  if (fs.existsSync(firebaseConfigPath)) {
-    const config = JSON.parse(fs.readFileSync(firebaseConfigPath, 'utf-8'));
-    firebaseProjectInfo = config;
-    const firebaseApp = initializeApp(config);
-    if (config.firestoreDatabaseId) {
-      dbFirestore = getFirestore(firebaseApp, config.firestoreDatabaseId);
-    } else {
-      dbFirestore = getFirestore(firebaseApp);
-    }
-    console.log("🔥 Firebase Firestore initialized successfully! Database ID:", config.firestoreDatabaseId || 'default');
-  }
-} catch (err) {
-  console.error("Firebase initialization warning:", err);
-}
+// Supabase is the single production persistence layer. Firebase/Firestore is intentionally
+// disabled here so serverless requests never hit the retired AI Studio project or its quota.
+const dbFirestore: any = null;
+const firebaseProjectInfo: any = null;
 
 
 
@@ -2232,7 +2216,7 @@ const CITY_TRACK_DNA_MAP: Record<string, {
     winningSires: [
       { name: "DEEP FIELD", powerBonus: 5.1, winRate: "%43.0", specialty: "Dar virajda çeviklik ve bariyer hakimiyeti" },
       { name: "SNITZEL", powerBonus: 4.9, winRate: "%40.0", specialty: "Starttan fırlayıp bariyer dibini alma" },
-      { name: "TORONADO", powerBonus: 4.8, winRate: "%39.0", specialty: "Kısa son düzlükte hemen vitese geçme" }
+      { name: "TORONADO", powerBonus: 4.8, winRate: "%39.0", specialty: "Kısa son düzl��kte hemen vitese geçme" }
     ],
     winningDams: [
       { name: "BLACK CAVIAR", powerBonus: 4.8, winRate: "%40.0", specialty: "Start çevikliği" }
@@ -4038,7 +4022,7 @@ function generateDynamicTjkBulletin(hipodromName: string, dateStr?: string): str
 3 - ÇEÇAN BEY (53kg 3y a e SK KG DB U.LEVENT)
 4 - DEPREM HAN (57kg 3y a e SK KG DB MÜS.ÇELİK)
 5 - TAŞKARA (57kg 3y k e KG M.A.AYDIN)
-6 - YÜREK ŞAH (57kg 3y k e SK KG DB N.AVCİ)
+6 - YÜREK ŞAH (57kg 3y k e SK KG DB N.AVC��)
 7 - ŞAHLANAN (57kg 3y a e KG SK G.KOCAKAYA)
 8 - KAFKAS GÜNEŞİ (55kg 3y k d SK H.KARATAŞ)
 
@@ -5334,9 +5318,13 @@ async function parseRacesAsync(bulletinText: string, oyunProgrami: string, custo
 // --- API ROUTES ---
 
 // Healthcheck API
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
-});
+  app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString(), persistence: 'supabase' });
+  });
+
+  app.get('/api/status', (req, res) => {
+  res.json({ status: 'ok', service: 'turbo-10x-pro', persistence: 'supabase', time: new Date().toISOString() });
+  });
 
 // Merkezi Otonom Robot Orkestratörü & 24 Canonical Tools Healthcheck API
 app.get('/api/robot/health', (req, res) => {
