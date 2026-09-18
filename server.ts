@@ -4871,7 +4871,7 @@ VERİ AYRIŞTIRMA (PARSING) VE FİLTRELEME KURALLARI:
    - Jokey, kilo/sıklet, AGF %, ganyan oranı ve handikap puanı varsa ilgili alanlara (jokey, kilo, agf, ganyan, hp) aktar.
 
 3. ÇIKTI FORMATI:
-   Sana verilen bültendeki tüm koşuları (ayakları) tespit et ve sadece gerçek atları verilen JSON şemasına %100 sadık kalarak döndür.
+   Sana verilen bültendeki tüm koşuları (ayaklar��) tespit et ve sadece gerçek atları verilen JSON şemasına %100 sadık kalarak döndür.
 
 BÜLTEN METNİ:
 ${bulletinText.substring(0, 30000)}`,
@@ -11421,22 +11421,46 @@ app.post('/api/ai/chat', async (req, res) => {
     }
 
     if (hasFreshBulletinInput) {
-      const freshSourceNorm = normalizeText(userMessage);
+      const freshSourceText = `${userMessage}\n${JSON.stringify(req.body?.currentRaces || req.body?.races || [])}`;
+      const uiRaces: InternalRace[] = Array.isArray(req.body?.currentRaces || req.body?.races)
+        ? (req.body.currentRaces || req.body.races).map((race: any, index: number) => ({
+            raceNo: Number(race.raceNo) || index + 1,
+            title: race.title || `${Number(race.raceNo) || index + 1}. Koşu`,
+            condition: race.condition || 'Genel Koşu Şartı',
+            horses: (race.horses || []).map((horse: any, horseIndex: number) => ({
+              num: String(horse.num || horse.no || horse.number || horseIndex + 1),
+              name: String(horse.name || horse.horseName || '').trim(),
+              jockey: horse.jockey || horse.jockeyName || 'Bilinmiyor',
+              trainer: horse.trainer || horse.trainerName || 'Bilinmiyor',
+              equipments: horse.equipments || [],
+              sire: horse.sire || 'Bilinmiyor',
+              dam: horse.dam || 'Bilinmiyor',
+              weight: Number(horse.weight) || 56,
+              odds: horse.odds ? String(horse.odds) : undefined,
+              agf: horse.agf ? String(horse.agf) : undefined,
+              hp: horse.hp ? String(horse.hp) : undefined,
+              isScratched: horse.isScratched
+            })).filter((horse: any) => horse.name.length >= 3)
+          })).filter((race: any) => race.horses.length > 0)
+        : [];
       let freshParsedRaces: InternalRace[] = extractedRealRaces.length > 0
         ? extractedRealRaces
-        : (incomingUserRaces.length > 0 ? incomingUserRaces : storedRaces);
+        : (incomingUserRaces.length > 0 ? incomingUserRaces : (uiRaces.length > 0 ? uiRaces : storedRaces));
       if (freshParsedRaces.length < 6 && userMessage) {
         const directFreshParse = parseRaces(userMessage.replace(/\s+(?=(?:\d{1,2})\s*[.)]?\s*(?:KOŞU|KOSU|AYAK)\b)/gi, '\n'), targetProgram, undefined, targetHipodrom);
         if (directFreshParse.allRaces.length > freshParsedRaces.length) {
           freshParsedRaces = directFreshParse.allRaces;
         }
       }
-      const sourceBoundRaces = freshParsedRaces
+      const candidateRaces = freshParsedRaces.length >= 6
+        ? freshParsedRaces
+        : mergeInternalRaces(freshParsedRaces, uiRaces);
+      const sourceBoundRaces = candidateRaces
         .map((race: any) => ({
           ...race,
           horses: (race.horses || []).filter((horse: any) => {
             const name = normalizeText(String(horse.name || ''));
-            return sourceContainsHorseName(userMessage, String(horse.name || ''));
+            return sourceContainsHorseName(freshSourceText, String(horse.name || ''));
           })
         }))
         .filter((race: any) => race.horses.length > 0);
