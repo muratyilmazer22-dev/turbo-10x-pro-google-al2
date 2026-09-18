@@ -5450,8 +5450,8 @@ export default function App() {
                 </div>
               </div>
 
-              {/* DEDICATED DAILY WINNING HORSES SCRAPER & ETCHER PANEL */}
-              <div className="bg-gradient-to-r from-[#1B1D23] via-[#1E2028] to-[#1B1D23] border border-emerald-500/50 rounded-xl p-4 sm:p-6 space-y-4 shadow-2xl relative overflow-hidden">
+              {/* Daily winner sync is available from the analysis workflow; keep this screen focused on memory capture. */}
+              {false && <div className="bg-gradient-to-r from-[#1B1D23] via-[#1E2028] to-[#1B1D23] border border-emerald-500/50 rounded-xl p-4 sm:p-6 space-y-4 shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-[#2A2D35] pb-4">
                   <div className="flex items-center gap-3">
@@ -5588,7 +5588,7 @@ export default function App() {
                     </div>
                   </div>
                 )}
-              </div>
+              </div>}
 
               {/* Large Copy-Paste & Screenshot Input Card */}
               <div className="bg-[#1B1D23] border border-amber-500/40 rounded-xl p-4 sm:p-6 space-y-4 shadow-xl">
@@ -5599,10 +5599,10 @@ export default function App() {
                     </div>
                     <div>
                       <h3 className="text-sm sm:text-base font-extrabold text-amber-400 uppercase tracking-wide flex items-center gap-2">
-                        <span>🧠</span> HAFIZA & BÜLTEN KOPYALA - YAPIŞTIR MERKEZİ
+                        <span>🧠</span> HAFIZAYA NOT EKLE
                       </h3>
                       <p className="text-[11px] text-[#8E9299]">
-                        Google NotebookLM notlarınızı, yarış duyumlarını veya galopları topluca buraya yazın/yapıştırın; yapay zeka hafızasına aktarın.
+                        Bülten, yarış notu, galop veya analiz metnini buraya yapıştırın; kaydettiğiniz bilgiler sonraki analizlerde kullanılır.
                       </p>
                     </div>
                   </div>
@@ -5647,8 +5647,7 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Google NotebookLM Import Help Box */}
-                <div className="bg-[#0F1012] border border-blue-500/30 rounded-lg p-3.5 space-y-2">
+                {false && <div className="bg-[#0F1012] border border-blue-500/30 rounded-lg p-3.5 space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="text-base">📘</span>
@@ -5663,7 +5662,7 @@ export default function App() {
                   <p className="text-[11px] text-[#A0A5B0] leading-relaxed">
                     NotebookLM (<a href="https://notebooklm.google.com" target="_blank" rel="noreferrer" className="text-blue-400 underline font-bold">notebooklm.google.com</a>) üzerindeki tüm notlarınızı veya kaynak metinlerinizi kopyalayıp aşağıdaki kutuya yapıştırın ve <strong>"💾 Hafızaya Kaydet"</strong> butonuna basın. Yapay zeka bülten analizinde bu notları otomatik olarak hatırlar ve değerlendirir.
                   </p>
-                </div>
+                </div>}
 
                 {/* Large Textarea */}
                 <div className="space-y-3">
@@ -5672,29 +5671,16 @@ export default function App() {
                     value={newContent}
                     onChange={(e) => setNewContent(e.target.value)}
                     placeholder="NotebookLM notlarınızı, galop derecelerini, duyumları veya at analizlerini buraya yapıştırın (Örn: 'SHINING GLORY 1400m çimde 1.24 derece yaptı, favori...')..."
-                    className="w-full bg-[#0F1012] border border-[#2A2D35] rounded-xl p-4 text-xs sm:text-sm font-mono text-[#E0E0E0] focus:border-amber-500 focus:outline-none transition-colors"
+                    className="w-full min-h-[320px] sm:min-h-[380px] resize-y bg-[#0F1012] border border-[#2A2D35] rounded-xl p-4 text-sm sm:text-base font-mono text-[#E0E0E0] leading-relaxed focus:border-amber-500 focus:outline-none transition-colors"
                   />
 
                   {/* Big Action Buttons */}
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
-                    <div className="text-[11px] font-mono text-[#8E9299] flex items-center gap-1.5">
-                      <span className="text-amber-400">💡 İpucu:</span>
-                      <span>NotebookLM'deki tüm not metinlerinizi tek seferde yapıştırabilirsiniz.</span>
+                    <div className="text-[11px] text-[#8E9299]">
+                      {newContent.length.toLocaleString('tr-TR')} karakter
                     </div>
 
                     <div className="flex items-center gap-2.5 w-full sm:w-auto">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMemorySearch(newContent);
-                          fetchMemoryEntries();
-                        }}
-                        className="flex-1 sm:flex-initial bg-[#2A2D35] hover:bg-[#3A3D45] text-amber-400 border border-amber-500/40 px-5 py-2.5 rounded-lg font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all min-h-[44px]"
-                      >
-                        <Search className="w-4 h-4" />
-                        <span>🔍 Hafızada Ara</span>
-                      </button>
-
                       <button
                         type="button"
                         onClick={handleQuickMemorySave}
@@ -6560,7 +6546,7 @@ export default function App() {
 
                   <div className="space-y-3">
                     <textarea
-                      rows={8}
+rows={14}
                       value={bulkResultsText}
                       onChange={(e) => setBulkResultsText(e.target.value)}
                       placeholder="TJK Sonuç metnini buraya yapıştırın (Örn: 1. Koşu: 1. SHINING GLORY (54kg, Kaizbert, Vedat Abiş, 1.24.50)...)"
