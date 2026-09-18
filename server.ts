@@ -1552,7 +1552,7 @@ export function parseRequestedRacesFromMessage(message: string): { races: number
     }
   }
 
-  // 5. Single race: ONLY when explicitly requested as a single race e.g. "SADECE 3. KOŞU", "3. KO��UYU İNCELE", "YALNIZCA 4. KOŞU"
+  // 5. Single race: ONLY when explicitly requested as a single race e.g. "SADECE 3. KOŞU", "3. KO����UYU İNCELE", "YALNIZCA 4. KOŞU"
   const singleMatch = norm.match(/(?:YALNIZCA|SADECE|TEK)\s*(\d{1,2})\s*[\.\:\)]*\s*(?:KOSU|KOŞU|AYAK)/i) ||
                      norm.match(/(\d{1,2})\s*[\.\:\)]*\s*(?:KOSU|KOŞU|AYAK)\s*(?:INCELE|ANALIZ|YORUMLA|BAK)/i);
   if (singleMatch && singleMatch[1]) {
@@ -5337,6 +5337,13 @@ app.get('/api/robot/health', (req, res) => {
       auditLogs: historicalDb.auditLogs.size
     };
     const activeModel = Array.from(historicalDb.modelVersions.values()).find(m => m.isActive) || Array.from(historicalDb.modelVersions.values())[0];
+    const dataBackedSubsystems = {
+      historicalDatabase: memoryStats.rawRaces > 0 ? 'READY' : 'DEGRADED_NO_RACE_DATA',
+      resultLearning: memoryStats.rawResults > 0 && memoryStats.learningEvents > 0 ? 'READY' : 'DEGRADED_NO_RESULT_DATA',
+      featureProfiles: memoryStats.featureProfiles > 0 ? 'READY' : 'DEGRADED_NO_FEATURE_DATA',
+      auditTrail: memoryStats.auditLogs > 0 ? 'READY' : 'DEGRADED_NO_AUDIT_DATA'
+    } as const;
+    const dataReadiness = Object.values(dataBackedSubsystems).every(status => status === 'READY') ? 'READY' : 'DEGRADED';
     
     // Quick execution test on canonical tools
     const testRaceCard = autonomousRobot.get_race_card('IST-2024-05-15-R5');
@@ -5357,10 +5364,12 @@ app.get('/api/robot/health', (req, res) => {
     );
 
     res.json({
-      status: 'ok',
+      status: dataReadiness === 'READY' ? 'ok' : 'degraded',
       orchestrator: 'AutonomousRobotOrchestrator',
       version: activeModel?.versionId || 'v2.1-production',
       memoryStats,
+      dataReadiness,
+      dataBackedSubsystems,
       toolsCount: 24,
       canonicalToolsStatus: 'All 24 Canonical Tools Loaded & Active',
       subsystems: {
@@ -5370,7 +5379,10 @@ app.get('/api/robot/health', (req, res) => {
         monteCarlo: 'ONLINE',
         knapsackOptimizer: 'ONLINE',
         auditShield: 'ONLINE',
-        learningMemory: 'ONLINE'
+        learningMemory: dataBackedSubsystems.resultLearning === 'READY' ? 'ONLINE' : 'DEGRADED',
+        historicalData: dataBackedSubsystems.historicalDatabase,
+        featureProfiles: dataBackedSubsystems.featureProfiles,
+        auditTrail: dataBackedSubsystems.auditTrail
       },
       timestamp: new Date().toISOString()
     });

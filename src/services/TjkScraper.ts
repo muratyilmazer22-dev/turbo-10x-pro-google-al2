@@ -47,6 +47,15 @@ export interface TjkRaceSchedule {
   horses: TjkRawHorseEntry[];
 }
 
+export interface BulletinReadQuality {
+  status: 'VERIFIED' | 'DEGRADED' | 'REJECTED';
+  score: number;
+  raceCount: number;
+  horseCount: number;
+  missingFields: string[];
+  warnings: string[];
+}
+
 export interface TjkDailyBulletin {
   date: string;
   hipodrom: string;
@@ -54,6 +63,7 @@ export interface TjkDailyBulletin {
   isScrapedLive: boolean;
   fetchedAt: string;
   sourceUrl?: string;
+  readQuality?: BulletinReadQuality;
 }
 
 export class TjkScraper {
@@ -148,12 +158,14 @@ export class TjkScraper {
 
           // Kilo & Jokey
           const weightText = $(cols[3]).text().trim();
-          const weight = parseFloat(weightText.replace(',', '.')) || 56.0;
-          const jockeyName = $(cols[4]).text().trim() || 'Jokey Belirtilmemiş';
+          const parsedWeight = parseFloat(weightText.replace(',', '.'));
+          const weight = Number.isFinite(parsedWeight) ? parsedWeight : Number.NaN;
+          const jockeyName = $(cols[4]).text().trim();
 
           // Handikap Puanı & Kulvar
           const handicapText = cols.length > 5 ? $(cols[5]).text().trim() : '';
-          const handicap = parseInt(handicapText, 10) || 50;
+          const parsedHandicap = parseInt(handicapText, 10);
+          const handicap = Number.isFinite(parsedHandicap) ? parsedHandicap : undefined;
 
           // Son 5 yarış formu (Örn: "12345" veya "1-2-4-1-3")
           const formText = cols.length > 6 ? $(cols[6]).text().trim() : '';
@@ -161,7 +173,8 @@ export class TjkScraper {
 
           // Ganyan (Market Odds) & AGF
           const oddsText = cols.length > 7 ? $(cols[7]).text().trim() : '';
-          const marketOdds = parseFloat(oddsText.replace(',', '.')) || 3.5;
+          const parsedMarketOdds = parseFloat(oddsText.replace(',', '.'));
+          const marketOdds = Number.isFinite(parsedMarketOdds) ? parsedMarketOdds : undefined;
 
           const agfText = cols.length > 8 ? $(cols[8]).text().trim() : '';
           const agfPercent = parseFloat(agfText.replace('%', '').trim()) || undefined;
@@ -197,20 +210,44 @@ export class TjkScraper {
       }
     });
 
+    const readQuality = this.assessBulletinQuality(races);
     return {
       date,
       hipodrom,
       races,
-      isScrapedLive: races.length > 0,
-      fetchedAt: new Date().toISOString()
+      isScrapedLive: readQuality.status !== 'REJECTED',
+      fetchedAt: new Date().toISOString(),
+      readQuality
     };
+  }
+
+  public static assessBulletinQuality(races: TjkRaceSchedule[]): BulletinReadQuality {
+    const missingFields = new Set<string>();
+    let horseCount = 0;
+    let completeHorseCount = 0;
+    for (const race of races) {
+      if (!race.distance) missingFields.add('distance');
+      if (!race.surface) missingFields.add('surface');
+      for (const horse of race.horses) {
+        horseCount += 1;
+        const complete = Number.isFinite(horse.weight) && Boolean(horse.jockeyName) && Boolean(horse.horseName) && Boolean(horse.last5Races.length);
+        if (complete) completeHorseCount += 1;
+        if (!Number.isFinite(horse.weight)) missingFields.add('weight');
+        if (!horse.jockeyName) missingFields.add('jockey');
+        if (!horse.last5Races.length) missingFields.add('last5Races');
+      }
+    }
+    const score = horseCount === 0 ? 0 : Math.round((completeHorseCount / horseCount) * 100);
+    const warnings = Array.from(missingFields).map((field) => `${field} alanı eksik veya doğrulanamadı`);
+    const status = races.length === 0 || horseCount === 0 ? 'REJECTED' : score < 70 ? 'DEGRADED' : 'VERIFIED';
+    return { status, score, raceCount: races.length, horseCount, missingFields: Array.from(missingFields), warnings };
   }
 
   /**
    * Son 5 yarış metnini sayı dizisine çevirir
    */
   public static parseLast5Races(formStr: string): number[] {
-    if (!formStr) return [3, 2, 1];
+    if (!formStr) return [];
     const cleaned = formStr.replace(/[^\d-]/g, '');
     if (cleaned.includes('-')) {
       return cleaned.split('-').map(n => parseInt(n, 10)).filter(n => !isNaN(n)).slice(-5);
