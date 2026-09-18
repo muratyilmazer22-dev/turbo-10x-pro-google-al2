@@ -13,7 +13,7 @@
  * 5. Matematiksel olarak doğrulanmış, 0-100 aralığında normalize özellik vektörleri üretme.
  */
 
-import { HorseDocument, PedigreeGraphNode, GallopEntry, SpeedRatingEntry, DosageIndex } from '../db/mongodbSchema';
+import { HorseDocument, PedigreeGraphNode, GallopEntry, SpeedRatingEntry, DosageIndex } from '../db/mongodbSchema.js';
 
 export interface RaceContextFeatures {
   distance: number;

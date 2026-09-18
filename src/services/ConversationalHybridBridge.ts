@@ -15,10 +15,10 @@
  */
 
 import { GoogleGenAI } from '@google/genai';
-import { TjkScraper, TjkDailyBulletin } from './TjkScraper';
-import { QuantitativeRiskEngine, QuantitativeRaceAnalysisResult } from './QuantitativeRiskEngine';
-import { DataMapper } from './DataMapper';
-import { ProgramDetector } from './ProgramDetector';
+import { TjkScraper, TjkDailyBulletin } from './TjkScraper.js';
+import { QuantitativeRiskEngine, QuantitativeRaceAnalysisResult } from './QuantitativeRiskEngine.js';
+import { DataMapper } from './DataMapper.js';
+import { ProgramDetector } from './ProgramDetector.js';
 
 export interface UserParsedIntent {
   rawPrompt: string;

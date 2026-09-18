@@ -10,11 +10,11 @@
  * 4. Ağ arızalarında ve eksik verilerde otomatik fallback ve istatistiksel tamamlama uygular.
  */
 
-import { HorseDocument, SpeedRatingEntry, GallopEntry, PedigreeGraphNode } from '../db/mongodbSchema';
-import { RawHorseFeatureInput } from './ScoreCalculator';
-import { QuantitativeHorseInput, QuantitativeRaceInput } from './QuantitativeRiskEngine';
-import { TjkRawHorseEntry, TjkRaceSchedule } from './TjkScraper';
-import { PedigreeScraper, ScrapedPedigreeResult } from './PedigreeScraper';
+import { HorseDocument, SpeedRatingEntry, GallopEntry, PedigreeGraphNode } from '../db/mongodbSchema.js';
+import { RawHorseFeatureInput } from './ScoreCalculator.js';
+import { QuantitativeHorseInput, QuantitativeRaceInput } from './QuantitativeRiskEngine.js';
+import { TjkRawHorseEntry, TjkRaceSchedule } from './TjkScraper.js';
+import { PedigreeScraper, ScrapedPedigreeResult } from './PedigreeScraper.js';
 
 export interface ProcessedPipelineHorse {
   rawTjk: TjkRawHorseEntry;

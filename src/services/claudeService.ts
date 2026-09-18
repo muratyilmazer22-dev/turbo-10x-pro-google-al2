@@ -9,8 +9,8 @@
 
 import { GoogleGenAI } from '@google/genai';
 import { safeJsonParse } from './networkReliability.js';
-import { QuantitativeRiskEngine, QuantitativeHorseInput, EvaluatedQuantitativeRunner } from './QuantitativeRiskEngine';
-import { ScoreCalculator } from './ScoreCalculator';
+import { QuantitativeRiskEngine, QuantitativeHorseInput, EvaluatedQuantitativeRunner } from './QuantitativeRiskEngine.js';
+import { ScoreCalculator } from './ScoreCalculator.js';
 
 export function getAnthropicClient(): null {
   return null;

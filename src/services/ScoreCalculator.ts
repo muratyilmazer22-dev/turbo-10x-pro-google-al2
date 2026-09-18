@@ -6,7 +6,7 @@
  * istatistiksel temellere dayalı olarak 0 - 100 arası normalize skorlara dönüştürür.
  */
 
-import { DosageIndex, GallopEntry, SpeedRatingEntry } from '../db/mongodbSchema';
+import { DosageIndex, GallopEntry, SpeedRatingEntry } from '../db/mongodbSchema.js';
 
 export interface RawHorseFeatureInput {
   name: string;

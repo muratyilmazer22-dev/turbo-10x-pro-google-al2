@@ -40,8 +40,8 @@ import {
   AuditLogRecord,
   ErrorAttributionBreakdown,
   OptimizedCouponRecord
-} from './HistoricalRacingDatabase';
-import { PedigreeDnaEngine, PedigreeDnaProfile } from './PedigreeDnaEngine';
+} from './HistoricalRacingDatabase.js';
+import { PedigreeDnaEngine, PedigreeDnaProfile } from './PedigreeDnaEngine.js';
 
 export interface AuditCheckResult {
   passed: boolean;

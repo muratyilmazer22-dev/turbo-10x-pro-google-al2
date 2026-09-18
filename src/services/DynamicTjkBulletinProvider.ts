@@ -1,4 +1,4 @@
-import { ProgramDetector } from './ProgramDetector';
+import { ProgramDetector } from './ProgramDetector.js';
 
 /**
  * DynamicTjkBulletinProvider.ts
