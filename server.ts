@@ -4871,7 +4871,7 @@ VERİ AYRIŞTIRMA (PARSING) VE FİLTRELEME KURALLARI:
    - Jokey, kilo/sıklet, AGF %, ganyan oranı ve handikap puanı varsa ilgili alanlara (jokey, kilo, agf, ganyan, hp) aktar.
 
 3. ÇIKTI FORMATI:
-   Sana verilen bültendeki tüm koşuları (ayaklar��) tespit et ve sadece gerçek atları verilen JSON şemasına %100 sadık kalarak döndür.
+   Sana verilen bültendeki tüm koşuları (ayaklar����) tespit et ve sadece gerçek atları verilen JSON şemasına %100 sadık kalarak döndür.
 
 BÜLTEN METNİ:
 ${bulletinText.substring(0, 30000)}`,
@@ -10030,9 +10030,13 @@ app.post('/api/city-dna/calibrate', (req, res) => {
 
 app.post('/api/ai/chat', async (req, res) => {
   try {
-    const { message, image, images, history, hipodrom, date, programType, unitPrice: reqUnitPrice, targetBudget: reqTargetBudget } = req.body;
-    const userMessage = (message || "").trim();
-    const normMsg = normalizeText(userMessage);
+    const { message, image, images, history, hipodrom, date, programType, unitPrice: reqUnitPrice, targetBudget: reqTargetBudget, autonomousPipeline } = req.body;
+    const rawUserMessage = (message || "").trim();
+    const pipelineInstruction = autonomousPipeline?.enabled !== false
+      ? `\n\n[SİSTEM PIPELINE — OTOMATİK]\nKullanıcı metniyle birlikte bu analiz zincirini çalıştır: resmi bülten doğrulama → koşu türü ve zorluk sınıflandırması (Maiden, Şartlı, Handikap, KV, Grup, Satış) → pist/mesafe/kilo/jokey/tempo ve mevcut geçmiş verisi → risk ve sürpriz açıklığı → bütçe optimizasyonu → halüsinasyon/audit kontrolü. Sadece bültende doğrulanan atları kullan. Veri yoksa VERİ YOK de; kesin kazanç veya garanti iddiası kurma. Audit başarısızsa kupon üretme.`
+      : '';
+    const userMessage = `${rawUserMessage}${pipelineInstruction}`.trim();
+    const normMsg = normalizeText(rawUserMessage);
 
     let targetDate = detectDateFromText(userMessage, date || new Date().toISOString().split('T')[0]);
     

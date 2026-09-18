@@ -847,7 +847,14 @@ export default function AiChatWorkspace({
           date: selectedDate,
           programType: effectiveProgram,
           unitPrice,
-          targetBudget
+          targetBudget,
+          autonomousPipeline: {
+            enabled: true,
+            source: 'text-input',
+            requireOfficialBulletinOnly: true,
+            classifyRaceDifficulty: true,
+            auditBeforeReply: true
+          }
         })
       });
 
