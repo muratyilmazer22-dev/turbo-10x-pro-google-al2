@@ -1116,12 +1116,24 @@ export default function AiChatWorkspace({
 
   return (
     <div
-      className="flex flex-col h-full w-full min-h-0 min-w-0 bg-[#131418] text-[#E3E3E3] relative font-sans select-text overflow-hidden"
+      className="ai-analysis-shell flex flex-col h-full w-full min-h-0 min-w-0 bg-[#0d0f13] text-[#E3E3E3] relative font-sans select-text overflow-hidden"
       onDrop={handleDrop}
       onDragOver={handleDragOver}
     >
-      {/* 1. TOP HEADER (CLEAN & MINIMAL WITH POWERFUL SEARCH) */}
-      <div className="px-4 py-2.5 bg-[#131418] border-b border-[#23262E] flex flex-col gap-2 shrink-0 z-10">
+  {/* 1. TOP HEADER (CLEAN & MINIMAL WITH POWERFUL SEARCH) */}
+  <div className="analysis-commandbar shrink-0 border-b border-white/10 bg-[#11141a] px-4 py-3 sm:px-6">
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-400">TURBO 10X PRO / ANALİZ ÇALIŞMA ALANI</p>
+        <h1 className="mt-1 truncate text-base font-semibold text-white sm:text-lg">Doğrulanmış bülten üzerinden karar üret</h1>
+      </div>
+      <div className="hidden shrink-0 items-center gap-2 text-[11px] text-slate-400 sm:flex">
+        <span className="size-2 rounded-full bg-emerald-400" aria-hidden="true" />
+        Kaynak kilidi aktif
+      </div>
+    </div>
+  </div>
+  <div className="px-4 py-2.5 bg-[#11141a] border-b border-[#23262E] flex flex-col gap-2 shrink-0 z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />

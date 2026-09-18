@@ -3455,7 +3455,7 @@ export default function App() {
       {/* MAIN CONTAINER */}
       <div className="flex-1 flex flex-col h-full min-h-0 min-w-0 overflow-hidden">
         {/* TOP HEADER BAR */}
-        <header className="border-b border-[#2A2D35] bg-[#1B1D23] shrink-0">
+        <header className="app-header border-b border-[#2A2D35] bg-[#111318] shrink-0">
           {/* Main Header Row */}
           <div className="h-[104px] sm:h-16 px-3 sm:px-6 flex items-center justify-between gap-2">
             {/* Left Side: Toggle Menu & Desktop Module Tabs */}
@@ -3578,7 +3578,7 @@ export default function App() {
 
           {/* --- MENU 0: CANLI AI SOHBET & ANALİZ ASİSTANI (TURBO 10X NEURAL ASSISTANT) --- */}
           {menu === "🤖 AI Sohbet & Analiz" && (
-            <div className="flex-1 flex flex-col h-full w-full min-h-0 min-w-0 rounded-none overflow-hidden border-0 bg-[#131418]">
+            <div className="analysis-workspace flex-1 flex flex-col h-full w-full min-h-0 min-w-0 rounded-none overflow-hidden border-0 bg-[#0d0f13]">
               <AiChatWorkspace
                 selectedHipodrom={selectedHipodrom}
                 selectedDate={selectedDate}
