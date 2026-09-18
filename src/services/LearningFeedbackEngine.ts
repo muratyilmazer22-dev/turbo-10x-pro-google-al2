@@ -155,7 +155,11 @@ export class LearningFeedbackEngine {
     const suggestedWeights: DynamicWeightsBreakdown = { ...currentWeights };
 
     // Eğer kazanan atın galop puanı çok yüksek ama form puanı düşükse (Sürpriz idman atı)
-    if (topFactor.factor === 'gallop' && scores.formScore < 50) {
+    if (scores.pedigreeDistanceFit >= 65 && scores.trackAffinityScore >= 65) {
+      primaryErrorCause = "Kazanan safkanın pist ve orijin/pedigri uyumu güçlü olmasına rağmen seçim sıralamasında geri bırakılmış. Pist ve pedigree kanıtları ana sıralamaya taşınmalı; bu sonuç tek başına ağırlık değişikliği için yeterli değil.";
+      suggestedWeights.pedigree = Math.min(0.30, Number((suggestedWeights.pedigree + 0.02).toFixed(2)));
+      suggestedWeights.track = Math.min(0.30, Number((suggestedWeights.track + 0.02).toFixed(2)));
+    } else if (topFactor.factor === 'gallop' && scores.formScore < 50) {
       primaryErrorCause = "Form düşüklüğüne rağmen sabah galobunun gücü yarışı kazandırdı. Galop ağırlığı artırılmalı.";
       suggestedWeights.gallop = Math.min(0.30, Number((suggestedWeights.gallop + 0.03).toFixed(2)));
       suggestedWeights.form = Math.max(0.10, Number((suggestedWeights.form - 0.03).toFixed(2)));

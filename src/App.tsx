@@ -822,11 +822,21 @@ export default function App() {
     const validHorses = (race.horses || []).filter((h: any) => !isHorseScratched(h, race.raceNo));
     if (validHorses.length === 0) return [];
 
+    const evidenceScore = (horse: any) => {
+      const base = Number(horse.score) || 0;
+      const pedigree = Number(horse.pedigreeRating);
+      const track = Number(horse.hipodromWinnerMatchScore ?? horse.dnaMatchAffinity);
+      const dnaBoost = Number(horse.cityDnaScoreBoost);
+      const hasPedigreeEvidence = Number.isFinite(pedigree);
+      const hasTrackEvidence = Number.isFinite(track) || Number.isFinite(dnaBoost);
+      // Track/pedigree influence the ranking only when the bulletin or verified memory provides evidence.
+      return base + (hasPedigreeEvidence ? (pedigree - 50) * 0.18 : 0) + (hasTrackEvidence ? ((Number.isFinite(track) ? track - 50 : 0) * 0.16) + (Number.isFinite(dnaBoost) ? dnaBoost * 1.5 : 0) : 0);
+    };
+
     const sortHorsesByMerit = (list: any[]) => {
       return [...list].sort((a, b) => {
-        if (Math.abs((b.score || 0) - (a.score || 0)) > 0.05) {
-          return (b.score || 0) - (a.score || 0);
-        }
+        const evidenceGap = evidenceScore(b) - evidenceScore(a);
+        if (Math.abs(evidenceGap) > 0.05) return evidenceGap;
         if ((b.handicap || 0) !== (a.handicap || 0)) return (b.handicap || 0) - (a.handicap || 0);
         if ((b.pedigreeRating || 0) !== (a.pedigreeRating || 0)) return (b.pedigreeRating || 0) - (a.pedigreeRating || 0);
         if ((b.totalWins || 0) !== (a.totalWins || 0)) return (b.totalWins || 0) - (a.totalWins || 0);
