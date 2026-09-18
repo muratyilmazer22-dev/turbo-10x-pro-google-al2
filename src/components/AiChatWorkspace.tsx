@@ -219,6 +219,27 @@ async function optimizeImageFile(file: File): Promise<UploadedImageItem> {
   });
 }
 
+function createBulletinFingerprint(races: Race[]): string {
+  const normalized = races.map((race) => ({
+    raceNo: race.raceNo,
+    title: race.title,
+    condition: race.condition,
+    horses: (race.horses || []).map((horse) => ({
+      num: horse.no,
+      name: horse.horseName.trim().toLocaleUpperCase('tr-TR'),
+      jockey: horse.jockeyName,
+      weight: horse.weight,
+      equipments: horse.equipments
+    }))
+  }));
+  let hash = 2166136261;
+  for (const char of JSON.stringify(normalized)) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${normalized.length}:${hash >>> 0}`;
+}
+
 const INITIAL_WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome_msg',
   role: 'model',
@@ -287,6 +308,7 @@ export default function AiChatWorkspace({
 
   const [input, setInput] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+  const [analyzedBulletinFingerprint, setAnalyzedBulletinFingerprint] = useState<string | null>(null);
   const [analysisStage, setAnalysisStage] = useState<number>(0);
   const [syncingTjk, setSyncingTjk] = useState<boolean>(false);
   const [selectedImages, setSelectedImages] = useState<UploadedImageItem[]>([]);
@@ -759,8 +781,13 @@ export default function AiChatWorkspace({
       return;
     }
 
-    const userMsgId = `user_${Date.now()}`;
-    let autoContent = textToSend;
+  const userMsgId = `user_${Date.now()}`;
+  const currentBulletinFingerprint = createBulletinFingerprint(currentRaces || []);
+  const bulletinChangedSinceAnalysis = analyzedBulletinFingerprint !== null && analyzedBulletinFingerprint !== currentBulletinFingerprint;
+  let autoContent = textToSend;
+  if (bulletinChangedSinceAnalysis && /(?:KURGU|KUPON|ALTILI|TAHMİN|TAHMIN)/i.test(textToSend)) {
+    autoContent = `[YENİ BÜLTEN DEĞİŞİKLİĞİ ALGILANDI — ÖNCEKİ KURGU GEÇERSİZ, YALNIZCA GÜNCEL BÜLTENLE YENİ KURGU ÜRET]\n${textToSend}`;
+  }
     if (!autoContent && imagesToSend.length > 0) {
       autoContent = `📸 [${imagesToSend.length} Adet Bülten/Koşu Fotoğrafı Yüklendi - Lütfen Oku ve Analiz Et]`;
     }
@@ -839,8 +866,9 @@ export default function AiChatWorkspace({
         };
       }
 
-      if (res.ok && (data.reply || data.ticketPlan)) {
-        let replyContent = data.reply;
+  if (res.ok && (data.reply || data.ticketPlan)) {
+  setAnalyzedBulletinFingerprint(currentBulletinFingerprint);
+  let replyContent = data.reply;
 
         if (!replyContent && data.ticketPlan) {
           const plan = data.ticketPlan;
