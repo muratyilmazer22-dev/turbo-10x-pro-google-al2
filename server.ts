@@ -13582,6 +13582,9 @@ async function startServer() {
   });
 }
 
-startServer();
+// Vercel imports this module as a serverless handler; do not bind a TCP port there.
+if (!process.env.VERCEL) {
+  startServer();
+}
 
 export default app;
