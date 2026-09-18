@@ -13,10 +13,10 @@
  * 5. Kalıcı Hafıza ve Öğrenme Geçmişi (Learning Journal).
  */
 
-import { DynamicWeightsBreakdown } from './QuantitativeRiskEngine';
-import { HistoricalRacingDatabase, LearningEventRecord } from './HistoricalRacingDatabase';
+import { DynamicWeightsBreakdown } from './QuantitativeRiskEngine.js';
+import { HistoricalRacingDatabase, LearningEventRecord } from './HistoricalRacingDatabase.js';
 import { GoogleGenAI } from '@google/genai';
-import { safeJsonParse } from './networkReliability';
+import { safeJsonParse } from './networkReliability.js';
 
 export interface RaceActualResult {
   raceId: string;

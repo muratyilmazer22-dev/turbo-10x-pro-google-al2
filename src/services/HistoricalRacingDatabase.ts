@@ -16,7 +16,7 @@
 
 export type ConfidenceLevel = 'High' | 'Medium' | 'Low';
 
-import type { BulletinMemoryRecord } from './BulletinMemoryService';
+import type { BulletinMemoryRecord } from './BulletinMemoryService.js';
 
 export interface BaseRecord {
   id: string;

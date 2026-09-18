@@ -1,4 +1,4 @@
-import { HistoricalRacingDatabase } from './HistoricalRacingDatabase';
+import { HistoricalRacingDatabase } from './HistoricalRacingDatabase.js';
 
 export type BulletinDocumentKind = 'KURGU_BULTENI' | 'SONUCLU_BULTENI' | 'BELIRSIZ';
 

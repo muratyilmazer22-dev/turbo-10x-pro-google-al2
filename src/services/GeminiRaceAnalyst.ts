@@ -6,8 +6,8 @@
  */
 
 import { GoogleGenAI } from '@google/genai';
-import { safeJsonParse } from './networkReliability';
-import { QuantitativeRaceAnalysisResult } from './QuantitativeRiskEngine';
+import { safeJsonParse } from './networkReliability.js';
+import { QuantitativeRaceAnalysisResult } from './QuantitativeRiskEngine.js';
 
 let geminiClient: GoogleGenAI | null = null;
 

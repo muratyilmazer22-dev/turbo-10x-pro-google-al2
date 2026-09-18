@@ -12,7 +12,7 @@
  * 6. Fractional Kelly Kriteri (0.25x Kelly, Kasanın Max %10 Tavanı).
  */
 
-import { ScoreCalculator, RawHorseFeatureInput } from './ScoreCalculator';
+import { ScoreCalculator, RawHorseFeatureInput } from './ScoreCalculator.js';
 
 export interface QuantitativeHorseInput extends RawHorseFeatureInput {
   id: string;

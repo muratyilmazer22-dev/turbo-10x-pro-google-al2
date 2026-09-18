@@ -10,7 +10,7 @@
  */
 
 import * as cheerio from 'cheerio';
-import { safeFetchWithRetry } from './networkReliability';
+import { safeFetchWithRetry } from './networkReliability.js';
 
 export interface TjkRawHorseEntry {
   horseNo: string;

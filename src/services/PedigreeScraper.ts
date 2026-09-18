@@ -12,8 +12,8 @@
  */
 
 import * as cheerio from 'cheerio';
-import { DosageIndex, PedigreeGraphNode } from '../db/mongodbSchema';
-import { safeFetchWithRetry } from './networkReliability';
+import { DosageIndex, PedigreeGraphNode } from '../db/mongodbSchema.js';
+import { safeFetchWithRetry } from './networkReliability.js';
 
 export interface ScrapedPedigreeResult {
   horseName: string;
