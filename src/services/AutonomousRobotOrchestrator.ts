@@ -683,11 +683,20 @@ export class AutonomousRobotOrchestrator {
       const result = historicalDb.raceResults.get(`${r.raceId}-WINNER`);
 
       if (result) {
-        correctTop1++;
-        correctTop3++;
-        correctTop4++;
-        brierSum += 0.14;
-        logLossSum += 0.38;
+        const winnerNo = String((result as any).actualWinnerNo ?? (result as any).winnerNo ?? (result as any).horseNo ?? '').trim();
+        const prediction = Array.isArray((r as any).predictedRunners) ? (r as any).predictedRunners : [];
+        const predictedNos = prediction.map((item: any) => String(item.num ?? item.horseNo ?? '').trim()).filter(Boolean);
+        const top1 = winnerNo.length > 0 && predictedNos[0] === winnerNo;
+        const top3 = winnerNo.length > 0 && predictedNos.slice(0, 3).includes(winnerNo);
+        const top4 = winnerNo.length > 0 && predictedNos.slice(0, 4).includes(winnerNo);
+        if (top1) correctTop1++;
+        if (top3) correctTop3++;
+        if (top4) correctTop4++;
+        if (winnerNo.length > 0 && predictedNos.length > 0) {
+          const probability = top1 ? 0.72 : top3 ? 0.24 : 0.04;
+          brierSum += (probability - (top1 ? 1 : 0)) ** 2;
+          logLossSum += -Math.log(Math.max(0.001, probability));
+        }
       }
     }
 
@@ -736,12 +745,53 @@ export class AutonomousRobotOrchestrator {
     }
 
     // Learning events are created only from verified prediction/result pairs.
+    const processedEvents: LearningEventRecord[] = [];
+    for (const prediction of verifiedPredictionPairs) {
+      const result = verifiedResults.find(item => item.raceId === prediction.raceId);
+      const actualWinner = String((result as any)?.actualWinner ?? (result as any)?.winner ?? '').trim();
+      const predictedWinner = String((prediction as any).modelPredictedWinner ?? (prediction as any).predictedWinner ?? '').trim();
+      if (!actualWinner || !predictedWinner) continue;
+      const wasWinnerTop1 = actualWinner === predictedWinner;
+      const event: LearningEventRecord = {
+        id: `LRN-${prediction.raceId}`,
+        eventId: `LRN-${prediction.raceId}`,
+        raceId: prediction.raceId,
+        date: prediction.date,
+        hipodrom: prediction.hipodrom,
+        raceNo: prediction.raceNo,
+        modelVersionUsed: prediction.modelVersion ?? (prediction as any).modelVersionUsed ?? 'UNKNOWN',
+        actualWinner,
+        actualWinnerNo: (result as any)?.actualWinnerNo ?? (result as any)?.winnerNo,
+        actualWinnerOdds: (result as any)?.actualWinnerOdds ?? (result as any)?.odds,
+        modelPredictedWinner: predictedWinner,
+        predictedWinnerRank: (prediction as any).predictedWinnerRank ?? 1,
+        wasWinnerTop1,
+        wasWinnerTop3: wasWinnerTop1,
+        wasWinnerTop4: wasWinnerTop1,
+        brierScore: wasWinnerTop1 ? 0 : 1,
+        logLoss: wasWinnerTop1 ? 0 : 6.908,
+        errorAttribution: {
+          formError: 0, tempoError: 0, paceCrashError: 0, trackBiasError: 0,
+          weightError: 0, jockeyError: 0, trainerError: 0, pedigreeError: 0,
+          distanceError: 0, marketAgfError: 0, monteCarloError: 0, riskEstimationError: 0
+        },
+        primaryFailureCause: wasWinnerTop1 ? 'Hata Yok' : 'Model tahmini kazananı bulamadı',
+        rootCauseAnalysis: wasWinnerTop1 ? 'Doğrulanmış eşleşme.' : 'Doğrulanmış sonuç ile model tahmini farklı.',
+        countermeasureApplied: 'Sonuç doğrulaması kaydedildi; otomatik ağırlık değişikliği yapılmadı.',
+        timestamp: new Date().toISOString(),
+        source: 'MODEL_ENGINE',
+        confidenceLevel: 'Medium',
+        updatedAt: new Date().toISOString()
+      };
+      historicalDb.learningEvents.set(event.eventId, event);
+      processedEvents.push(event);
+    }
     return {
-      learningEventsProcessed: 0,
-      averageBrierScore: null,
-      identifiedWeakFactors: [],
-      strongFactors: [],
-      status: 'LEARNING_PIPELINE_REQUIRES_RESULT_MATCHER'
+      learningEventsProcessed: processedEvents.length,
+      averageBrierScore: processedEvents.length ? Number((processedEvents.reduce((sum, event) => sum + event.brierScore, 0) / processedEvents.length).toFixed(3)) : null,
+      identifiedWeakFactors: processedEvents.some(event => event.brierScore > 0) ? ['predictionMismatch'] : [],
+      strongFactors: processedEvents.some(event => event.brierScore === 0) ? ['verifiedPredictionMatch'] : [],
+      status: processedEvents.length ? 'VERIFIED_RESULTS_PROCESSED' : 'VERIFIED_RESULT_FIELDS_REQUIRED'
     };
 
     const sampleEvent: LearningEventRecord = {
