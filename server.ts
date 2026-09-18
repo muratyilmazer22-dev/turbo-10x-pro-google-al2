@@ -8,7 +8,7 @@ import { createServer as createViteServer } from 'vite';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 import { GoogleGenAI, Type } from "@google/genai";
-import { analyzeRaceWithClaude, calculateLocalDeterministicAhp, HybridRaceAnalysisInput } from "./src/services/claudeService";
+import { analyzeRaceWithClaude, calculateLocalDeterministicAhp, HybridRaceAnalysisInput } from "./src/services/claudeService.js";
 import { safeJsonParse, safeFetchWithRetry } from "./src/services/networkReliability";
 import { HorseDocument, PedigreeGraphNode, SpeedRatingEntry, GallopEntry } from "./src/db/mongodbSchema";
 import { LearningFeedbackEngine, ModelPriorPrediction, RaceActualResult } from "./src/services/LearningFeedbackEngine";
@@ -3460,7 +3460,7 @@ function parseHorseLine(rawLine: string, fallbackNum: number): ParsedHorseInfo |
       if (om) pOdds = om[1].replace(",", ".");
 
       let pHp: string | undefined = undefined;
-      const hpm = tail.match(/\b(?:[A-ZÇĞİÖŞÜa-zçğıöşü\.\s]+?)\s+\d+(?:DS)?\s+(\d{1,3})\b/);
+      const hpm = tail.match(/\b(?:[A-ZÇĞİÖŞÜa-zç��ıöşü\.\s]+?)\s+\d+(?:DS)?\s+(\d{1,3})\b/);
       if (hpm) {
         pHp = hpm[1];
       } else {
@@ -5548,12 +5548,34 @@ app.get('/api/bulletins/:hipodrom', (req, res) => {
     }
   });
 
-  // Persistent bulletin memory endpoint. Service-role access stays server-side only.
+  const classifyBulletinForMemory = (text: string): 'SONUCLU_BULTENI' | 'NORMAL_BULTEN' | 'BELIRSIZ' => {
+    const normalized = text.toLocaleUpperCase('tr-TR');
+    const resultSignals = [
+      /SONUÇ|SONUCLAR|SONUÇLAR|SIRALAMA|YARIŞ SONUCU|KAZANAN/,
+      /1\s*[.)-]\s*[A-ZÇĞİÖŞÜ][A-ZÇĞİÖŞÜ ]{2,}/,
+      /BİRİNCİ|IKINCI|İKİNCİ|ÜÇÜNCÜ|DÖRDÜNCÜ|BEŞİNCİ|ALTINCI/
+    ];
+    const resultSignalCount = resultSignals.filter((signal) => signal.test(normalized)).length;
+    if (resultSignalCount >= 2) return 'SONUCLU_BULTENI';
+    if (/(BÜLTEN|KOŞU|KOSU|AT NO|JOKEY|SİKLET|SIKLET|AGF|HANDİKAP|HANDIKAP)/i.test(text)) return 'NORMAL_BULTEN';
+    return 'BELIRSIZ';
+  };
+
+  // Only completed/result bulletins enter learning memory. Forecast bulletins remain operational data.
   app.post('/api/memory/bulletins', async (req, res) => {
     try {
       const { sourceText, hipodrom, raceDate, extractedData = {}, sourceType = 'user_bulletin' } = req.body || {};
       if (typeof sourceText !== 'string' || sourceText.trim().length < 40) {
         return res.status(400).json({ success: false, error: 'Geçerli bir bülten metni gereklidir.' });
+      }
+      const bulletinKind = classifyBulletinForMemory(sourceText);
+      if (bulletinKind !== 'SONUCLU_BULTENI') {
+        return res.status(422).json({
+          success: false,
+          stored: false,
+          bulletinKind,
+          error: 'Hafıza Bankası yalnızca sonuçlu bültenleri kabul eder. Normal bülten analiz için kullanılabilir, öğrenme hafızasına kaydedilmez.'
+        });
       }
       const url = process.env.SUPABASE_URL;
       const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -6122,9 +6144,11 @@ app.post(['/api/bulletin', '/api/bulletins'], (req, res) => {
   const dateKey = `${normHipodrom}_${targetDate}`;
   const rawDateKey = `${rawUpper}_${targetDate}`;
 
+  const bulletinKind = classifyBulletinForMemory(content);
   const entry = {
-    content: content.trim(),
-    updated_at: new Date().toISOString()
+  content: content.trim(),
+  bulletin_kind: bulletinKind,
+  updated_at: new Date().toISOString()
   };
 
   db.bulletins[dateKey] = entry;
@@ -6358,7 +6382,7 @@ app.post('/api/analyze', async (req, res) => {
     optimalWeightRange: cityProfile.optimalWeightRange
   } : undefined;
 
-  // 💾 HAFIZAYA OTOMATİK KURGU KAYDI (TICKET PERSISTENCE)
+  // �� HAFIZAYA OTOMATİK KURGU KAYDI (TICKET PERSISTENCE)
   try {
     const totalKomb = raceResults.reduce((acc, r) => acc * Math.max(1, r.horses.slice(0, 4).length), 1);
     const unitPrice = 1.25;
@@ -11870,7 +11894,7 @@ app.post('/api/ai/chat', async (req, res) => {
 
           if (weightDropped || hasEliteJockey) {
             score += 18; // Ganyan Avcısı Fırsat Puanı
-            ganyanAvcisiInsight = `💡 GANYAN AVCISI FIRSATI: Geçmiş olumsuz koşu şartları bugün lehine döndü (${weightVal}kg / ${h.jockey}). Geçmiş yenilgi engel değil, yüksek ganyan fırsatıdır!`;
+            ganyanAvcisiInsight = `💡 GANYAN AVCISI FIRSATI: Geçmiş olumsuz koşu şartları bugün lehine döndü (${weightVal}kg / ${h.jockey}). Ge��miş yenilgi engel değil, yüksek ganyan fırsatıdır!`;
           } else {
             redFlags.forEach(rf => {
               score += (rf.penaltyPoints || -15);
@@ -13280,7 +13304,7 @@ ${selectedLegPicks.map(p => `${p.raceNo}.koşu ${p.chosenRunners.map(h => `${h.n
                 `• **AHP Puanı & EV:** ${matchedHorse.score?.toFixed(1) || '-'} / ${matchedHorse.ev?.toFixed(2) || '-'}\n\n` +
                 `Bu safkan bülten verilerinde ve AHP puanlamasında öne çıkan matematiksel kriterleriyle değerlendirilmiştir.`;
             } else {
-              aiResponseText = `Sorduğun safkanın resmi bülten oranlarını ve AGF verilerini inceledim ustam. Sıklet dengesi, AGF yüzdesi ve ganyan oranları çerçevesinde değerlendirme yapılmıştır.`;
+              aiResponseText = `Sorduğun safkanın resmi bülten oranlarını ve AGF verilerini inceledim ustam. Sıklet dengesi, AGF yüzdesi ve ganyan oranlar�� çerçevesinde değerlendirme yapılmıştır.`;
             }
           } else {
             const isLearningOrSyncQuery = Boolean(
