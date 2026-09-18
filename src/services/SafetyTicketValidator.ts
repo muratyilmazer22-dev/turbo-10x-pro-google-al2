@@ -372,8 +372,8 @@ export class SafetyTicketValidator {
       return b.bankoPower - a.bankoPower;
     });
 
-    const designatedMiddleBankoIdx = middleCandidates[0]?.legIdx ?? 2; // Varsayılan 3. veya 2. ayak
-    const designatedBankoInfo = middleCandidates[0];
+    const designatedBankoInfo = middleCandidates.find(candidate => candidate.criteriaCount >= 2);
+    const designatedMiddleBankoIdx = designatedBankoInfo?.legIdx ?? -1;
 
     // DİNAMİK KNAPSACK COMBINATORIAL ÇÖZÜCÜ
     // Hedef: 1. Ayak min 3 veya 4 at, Ortada (2, 3 veya 4. ayak) 1 tek, diğer ayaklar risk seviyesine göre
@@ -398,7 +398,7 @@ export class SafetyTicketValidator {
         for (let c = minL1; c <= maxL1; c++) opts.push(c);
         legOptions.push(opts.length > 0 ? opts : [Math.min(3, legRunnersCount)]);
       } else if (i === designatedMiddleBankoIdx) {
-        // KURAL 2: Risk Transferi Bankosu
+        // Ortadaki tek yalnızca en az iki doğrulanabilir kriter varsa zorunludur.
         legOptions.push([1]);
       } else if (i === 1 || i === 2 || i === 3) {
         // Diğer orta ayaklar: 2, 3 veya 4 at
@@ -475,7 +475,8 @@ export class SafetyTicketValidator {
 
     // Güvenlik emniyeti: Eğer hiçbir kombinasyon sığmadıysa kesin güvenli şablon
     if (bestUtility === -Infinity) {
-      bestAllocation = [3, 2, 1, 2, 2, 2];
+      bestAllocation = rawValidatedLegs.map((leg, index) => index === 0 ? Math.min(3, leg.sanitizedRunners.length) : Math.min(2, leg.sanitizedRunners.length));
+      if (designatedMiddleBankoIdx >= 0) bestAllocation[designatedMiddleBankoIdx] = 1;
       while (bestAllocation.reduce((a, b) => a * b, 1) > maxCombinationsLimit) {
         const maxVal = Math.max(...bestAllocation.slice(1));
         const decIdx = bestAllocation.findIndex((c, idx) => idx > 0 && c === maxVal && c > 1);
@@ -531,9 +532,11 @@ export class SafetyTicketValidator {
 
     // Standart Kırılmaz Çıktı Şablonu
     const formattedOutput =
-      `🎯 **TURBO 10X PRO — ${targetProgram.toUpperCase()} DİNAMİK ESNEKLİK VE HAYATTA KALMA ŞABLONU**\n\n` +
-      `🛡️ **1. Ayak Hayatta Kalma Kalkanı:** Devrede (${validatedLegs[0]?.count || 4} Safkan ile Kaos Sigortası)\n` +
-      `🔥 **Risk Transferi Bankosu:** ${designatedMiddleBankoIdx + 1}. Ayakta **(${validatedLegs[designatedMiddleBankoIdx]?.primary?.num}) ${validatedLegs[designatedMiddleBankoIdx]?.primary?.name}** (${designatedBankoInfo?.reason || 'Sıklet + Tempo'})\n` +
+      `TURBO 10X PRO — ${targetProgram.toUpperCase()} DİNAMİK BÜTÇE ŞABLONU\n\n` +
+      `1. Ayak Hayatta Kalma Kalkanı: ${validatedLegs[0]?.count || 0} safkan\n` +
+      (designatedBankoInfo
+        ? `Risk Transferi Bankosu: ${designatedMiddleBankoIdx + 1}. ayak — (${validatedLegs[designatedMiddleBankoIdx]?.primary?.num}) ${validatedLegs[designatedMiddleBankoIdx]?.primary?.name} (${designatedBankoInfo.reason})\n`
+        : `Risk bankosu: Doğrulanabilir iki kriter bulunmadığı için zorunlu tek uygulanmadı.\n`) +
       `🏆 **Gerçek Kazanma Yüzdesi:** ${winPercentage ? `%${winPercentage}` : 'HESAPLANAMAZ — doğrulanmış simülasyon verisi yok'}\n` +
       `💰 **Hedef Bütçe:** ${safeBudget} TL | **Hesaplanan Tutar:** ${calculatedCost} TL (${combinations} Kombinasyon × ${safeUnitPrice} TL) | **Program:** ${targetProgram}\n` +
       `⚡ **Gerçek EV:** ${totalEV} | **Birim Fiyat:** ${safeUnitPrice} TL\n\n` +
@@ -548,8 +551,8 @@ export class SafetyTicketValidator {
           `**${p.legIndex}. AYAK (${p.raceNo}. Koşu - ${p.condition}):**\n` +
           `• **Koşu Karakteri & Tempo:** ${p.paceCategory} — ${p.paceDetail}\n` +
           `• **Seçilen Safkanlar (${p.count} At):** \`[ ${hNums} ]\`\n` +
-          `• **Öncelikli Tercih:** **(${main.num}) ${main.name}** (${main.jockey}, ${main.weight}kg) → ${main.odds ? 'Ganyan: ' + main.odds : ''}${main.agf ? ' [%' + main.agf + ' AGF]' : ''} | **EV: ${isBanko ? '1.48' : '1.25'}**\n` +
-          `  *Net Gerekçe:* ${isBanko ? (p.legIndex === designatedMiddleBankoIdx + 1 ? '🔥 **RİSK BANKOSU (ORTA AYAK):** ' : '🔥 **GÜNÜN SAĞLAM BANKOSU:** ') + main.insight : (p.legIndex === 1 ? '🛡️ **HAYATTA KALMA KALKANI:** ' + main.insight : main.insight)}` +
+          `• **Öncelikli Tercih:** **(${main.num}) ${main.name}** (${main.jockey}, ${main.weight}kg) → ${main.odds ? 'Ganyan: ' + main.odds : ''}${main.agf ? ' [%' + main.agf + ' AGF]' : ''}\n` +
+          `  *Net Gerekçe:* ${isBanko ? (p.legIndex === designatedMiddleBankoIdx + 1 ? 'RİSK BANKOSU (ORTA AYAK): ' : 'BANKO: ') + main.insight : (p.legIndex === 1 ? 'HAYATTA KALMA KALKANI: ' + main.insight : main.insight)}` +
           (alts.length > 0
             ? `\n• **Alternatif / Sigorta:** ${alts.map(a => `**(${a.num}) ${a.name}** (${a.jockey}, ${a.weight}kg) → *Rolü:* Sürpriz/Sigorta | *Gerekçe:* ${a.insight}`).join('\n')}`
             : '')
@@ -560,8 +563,10 @@ export class SafetyTicketValidator {
       `🎯 **KUPON MATEMATİĞİ & RESMİ TJK SAĞLAMASI — ${targetProgram.toUpperCase()} (${safeUnitPrice} TL)**\n` +
       `====================================================\n` +
       `• 🛡️ **Hayatta Kalma Kalkanı:** 1. Ayak ${validatedLegs[0]?.count || 4} atla garantiye alındı.\n` +
-      `• 🔥 **Risk Transfer Bankosu:** ${designatedMiddleBankoIdx + 1}. Ayak tek geçildi.\n` +
-      `• 💰 **Hedef Bütçe:** ${safeBudget} TL | **TJK Birim Fiyat:** ${safeUnitPrice} TL\n` +
+      (designatedBankoInfo
+        ? `• Risk Transfer Bankosu: ${designatedMiddleBankoIdx + 1}. ayak tek geçildi.\n`
+        : `• Risk Transfer Bankosu: Uygun doğrulanabilir aday yok; zorunlu tek kullanılmadı.\n`) +
+      `• Hedef Bütçe: ${safeBudget} TL | TJK Birim Fiyat: ${safeUnitPrice} TL\n` +
       validatedLegs.map(p => `• ${p.legIndex}. Ayak (${p.raceNo}. Koşu): ${p.count} At -> [ ${p.chosenRunners.map(h => '(' + h.num + ') ' + h.name).join(', ')} ]`).join('\n') +
       `\n----------------------------------------------------\n` +
       `• **Kombinasyon:** ${validatedLegs.map(p => p.count).join(' × ')} = **${combinations} Kombinasyon**\n` +
