@@ -42,6 +42,7 @@ import {
   OptimizedCouponRecord
 } from './HistoricalRacingDatabase.js';
 import { PedigreeDnaEngine, PedigreeDnaProfile } from './PedigreeDnaEngine.js';
+import { evaluateDecisionConfidence, EvidenceItem } from './DecisionConfidenceEngine.js';
 
 export interface AuditCheckResult {
   passed: boolean;
@@ -281,6 +282,17 @@ export class AutonomousRobotOrchestrator {
     const stableScore = 75;
     const paddockScore = 75;
 
+    const evidence: EvidenceItem[] = [
+      { metric: 'hpTrend', value: horse.hp ?? horse.handicap, status: horse.hp || horse.handicap ? 'VERIFIED' : 'MISSING', source: 'bulletin', confidence: 85 },
+      { metric: 'form', value: horse.form, status: horse.form ? 'VERIFIED' : 'MISSING', source: 'bulletin', confidence: 80 },
+      { metric: 'speedRating', value: horse.speedRating, status: Number.isFinite(Number(horse.speedRating)) ? 'VERIFIED' : 'MISSING', source: 'bulletin', confidence: 80 },
+      { metric: 'distance', value: raceContext.distance, status: raceContext.distance ? 'VERIFIED' : 'MISSING', source: 'bulletin', confidence: 85 },
+      { metric: 'surface', value: raceContext.surface, status: raceContext.surface ? 'VERIFIED' : 'MISSING', source: 'bulletin', confidence: 85 },
+      { metric: 'jockey', value: horse.jockey, status: horse.jockey ? 'VERIFIED' : 'MISSING', source: 'bulletin', confidence: 85 },
+      { metric: 'historicalMatch', value: horse.historicalMatch, status: horse.historicalMatch ? 'VERIFIED' : 'MISSING', source: 'historical_races', confidence: 90 },
+    ];
+    const decisionConfidence = evaluateDecisionConfidence(evidence);
+
     const baseScore = (
       w.hpTrend * hpScore +
       w.form * formScore +
@@ -307,7 +319,14 @@ export class AutonomousRobotOrchestrator {
     return {
       baseScore: Math.round(baseScore * 10) / 10,
       weightsUsed: w,
-      weightsSummed100Percent: Math.abs(sumWeights - 1.0) < 0.001
+      weightsSummed100Percent: Math.abs(sumWeights - 1.0) < 0.001,
+      decisionConfidence,
+      bankoAllowed: decisionConfidence.bankoAllowed,
+      audit: {
+        missingMetrics: decisionConfidence.missingMetrics,
+        conflictingMetrics: decisionConfidence.conflictingMetrics,
+        provenance: decisionConfidence.provenance
+      }
     };
   }
 
