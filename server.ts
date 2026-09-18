@@ -4439,6 +4439,22 @@ function determineGameStartRaceAndLegs(
     numLegs = Math.min(6, totalRacesFound || 6);
   }
 
+  // Explicit user/program selection has absolute priority over inferred race-card rules.
+  const normalizedProgram = normalizeText(oyunProgrami || '');
+  const explicitSecondSix = /(?:2\.?\s*ALTILI|IKINCI\s+ALTILI|2\.?\s*6LI)/i.test(normalizedProgram);
+  const explicitFirstSix = /(?:1\.?\s*ALTILI|BIRINCI\s+ALTILI|1\.?\s*6LI)/i.test(normalizedProgram);
+  if (explicitSecondSix || explicitFirstSix) {
+    const requestedStart = customStartRace && customStartRace >= 1
+      ? customStartRace
+      : explicitSecondSix
+        ? (totalRacesFound >= 10 ? 5 : totalRacesFound === 9 ? 4 : totalRacesFound === 8 ? 3 : totalRacesFound === 7 ? 2 : 1)
+        : 1;
+    return {
+      startRaceNum: Math.min(requestedStart, Math.max(1, totalRacesFound - Math.min(6, totalRacesFound) + 1)),
+      numLegs: Math.min(6, totalRacesFound || 6)
+    };
+  }
+
   // 1. User manual override priority
   if (customStartRace && customStartRace >= 1) {
     if (customStartRace > 1 || !oyunProgrami.includes("2. Altılı")) {
