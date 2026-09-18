@@ -692,7 +692,7 @@ export default function AiChatWorkspace({
             `• **Tarih:** ${data.date} (${data.programType})\n` +
             `• **Koşu Sayısı:** ${data.selectedRaces?.length || 6} Koşu (${data.totalHorses || 0} Safkan)\n` +
             `• **Pist & AGF:** Canlı oranlar ve hipodrom pist parametreleri 20-Parametre AHP matrisine başarıyla işlendi.\n\n` +
-            `Detaylı kurgu ve kupon şablonlarını görmek için **"View changes / Detaylı Matris"** butonuna basabilir veya dilediğiniz koşuyu doğrudan sorabilirsiniz.`,
+            `Detaylı kurgu ve kupon şablonlarını g��rmek için **"View changes / Detaylı Matris"** butonuna basabilir veya dilediğiniz koşuyu doğrudan sorabilirsiniz.`,
           races: data.selectedRaces,
           timestamp: new Date().toISOString()
         };
@@ -796,12 +796,10 @@ export default function AiChatWorkspace({
     }, 380);
 
     // 🎯 Metin Tabanlı Otomatik Altılı / Program Tespiti
-    let effectiveProgram = oyunProgrami || "1. Altılı Ganyan";
-    const detectedProgFromText = ProgramDetector.detectProgramFromText(textToSend, effectiveProgram);
-    if (detectedProgFromText !== effectiveProgram) {
-      effectiveProgram = detectedProgFromText;
-      if (onProgramChange) onProgramChange(detectedProgFromText);
-    }
+    // Program selection is text-first. The legacy button state is intentionally ignored
+    // so a stale UI selection cannot override “1. Altılı” or “2. Altılı” in the message.
+    const detectedProgFromText = ProgramDetector.detectProgramFromText(textToSend, "");
+    const effectiveProgram = detectedProgFromText || "1. Altılı Ganyan";
 
     try {
       // 🛡️ 80-second timeout with resilient fallback for multimodal vision & deep analysis
@@ -834,19 +832,10 @@ export default function AiChatWorkspace({
         data = JSON.parse(responseText);
       } catch (jsonErr) {
         console.warn("JSON parse error on AI response:", responseText?.slice(0, 200));
-        const localFallbackPlan = ConversationalHybridBridge.generateTicketResponse(textToSend, currentRaces, effectiveProgram);
-        const plan = localFallbackPlan.ticketPlan;
-        const validated = SafetyTicketValidator.sanitizeAndValidateLegs(
-          plan.legs,
-          plan.requestedBudgetTL || targetBudget,
-          plan.unitPriceTL || unitPrice,
-          plan.hipodrom || selectedHipodrom,
-          effectiveProgram
-        );
         data = {
-          success: true,
-          reply: validated.formattedOutput,
-          ticketPlan: plan
+          success: false,
+          reply: "Sunucudan geçerli analiz yanıtı alınamadı. Doğrulanmış bülten verisi korunarak kupon üretilmedi.",
+          ticketPlan: null
         };
       }
 
@@ -937,17 +926,7 @@ export default function AiChatWorkspace({
         let fallbackReply = "";
 
         if (isTicketReq) {
-          // Run Local Deterministic AHP & Ticket Generator directly on client
-          const localFallbackPlan = ConversationalHybridBridge.generateTicketResponse(textToSend, currentRaces, effectiveProgram);
-          const plan = localFallbackPlan.ticketPlan;
-          const validated = SafetyTicketValidator.sanitizeAndValidateLegs(
-            plan.legs,
-            plan.requestedBudgetTL || targetBudget,
-            plan.unitPriceTL || unitPrice,
-            plan.hipodrom || selectedHipodrom,
-            effectiveProgram
-          );
-          fallbackReply = validated.formattedOutput;
+          fallbackReply = "Sunucu yanıtı alınamadı. Doğrulanmış bülten verisi olmadan kupon üretilmedi.";
         } else if (isComparisonOrResult) {
           const racesToAnalyze = (currentRaces && currentRaces.length > 0 ? currentRaces.slice(0, 6) : []);
           const legDetails = racesToAnalyze.map((r: any, idx: number) => {

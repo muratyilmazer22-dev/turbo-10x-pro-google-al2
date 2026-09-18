@@ -362,7 +362,8 @@ export class HistoricalRacingDatabase {
 
   private constructor() {
     this.initializeBaselineModel();
-    this.seedDeepHistoricalMemory();
+    // Historical records must come from verified TJK imports or user-provided sources.
+    // Do not seed fabricated champion/race records at startup.
   }
 
   public static getInstance(): HistoricalRacingDatabase {
