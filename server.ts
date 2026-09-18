@@ -4441,8 +4441,10 @@ function determineGameStartRaceAndLegs(
 
   // Explicit user/program selection has absolute priority over inferred race-card rules.
   const normalizedProgram = normalizeText(oyunProgrami || '');
-  const explicitSecondSix = /(?:2\.?\s*ALTILI|IKINCI\s+ALTILI|2\.?\s*6LI)/i.test(normalizedProgram);
-  const explicitFirstSix = /(?:1\.?\s*ALTILI|BIRINCI\s+ALTILI|1\.?\s*6LI)/i.test(normalizedProgram);
+  const normalizedBulletin = normalizeText(bulletinText || '');
+  const explicitSelectionText = `${normalizedProgram} ${normalizedBulletin}`;
+  const explicitSecondSix = /(?:2\s*ALTILI|IKINCI\s+ALTILI|2\s*6LI)/i.test(explicitSelectionText);
+  const explicitFirstSix = !explicitSecondSix && /(?:1\s*ALTILI|BIRINCI\s+ALTILI|1\s*6LI)/i.test(explicitSelectionText);
   if (explicitSecondSix || explicitFirstSix) {
     const requestedStart = customStartRace && customStartRace >= 1
       ? customStartRace
