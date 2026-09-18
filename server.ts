@@ -1191,6 +1191,26 @@ function normalizeText(text: string): string {
         .toUpperCase();
 }
 
+function sourceContainsHorseName(sourceText: string, horseName: string): boolean {
+  const compact = (value: string) => normalizeText(value).replace(/[^A-Z0-9]/g, '');
+  const source = compact(sourceText);
+  const horse = compact(horseName);
+  return horse.length >= 3 && source.includes(horse);
+}
+
+function expandCompactHorseLine(line: string): string[] {
+  const trimmed = line.trim();
+  if (!trimmed || /\b(?:KOŞU|KOSU|AYAK)\b/i.test(trimmed)) return [line];
+  const starts = [...trimmed.matchAll(/(?:^|\s)(\d{1,2})(?:[.)]|\s+)/g)]
+    .map(match => match.index ?? 0)
+    .filter((index, position, indexes) => position === 0 || index > indexes[position - 1]);
+  if (starts.length < 2) return [line];
+  return starts.map((start, index) => {
+    const end = index + 1 < starts.length ? starts[index + 1] : trimmed.length;
+    return trimmed.slice(start, end).trim().replace(/^(\d{1,2})(?=[.)]\s*|\s+)/, '$1 ');
+  }).filter(Boolean);
+}
+
 // Date Detection Helper for TJK Bulletins & Turkish Date Formats
 function detectDateFromText(text: string, fallbackDate?: string): string {
   if (!text || typeof text !== 'string') {
@@ -2039,7 +2059,7 @@ const CITY_TRACK_DNA_MAP: Record<string, {
   "PARISLONGCHAMP": {
     city: "PARISLONGCHAMP",
     hipodromName: "Hippodrome de ParisLongchamp (Fransa)",
-    trackType: "Büyük Çim & Tepe İni��i (Fausse Ligne Taktiksel Viraj)",
+    trackType: "Büyük Çim & Tepe İni����i (Fausse Ligne Taktiksel Viraj)",
     characteristics: "Longchamp'ın tepeden inişi ve 'fausse ligne' yalancı düzlüğü jokey ustalığı ve nefes dağılımı ister. Erken yürüyenler son 200m'de çöker; FRANKEL, SEA THE STARS ve GALILEO hatları zaferi belirler.",
     winningSires: [
       { name: "SEA THE STARS", powerBonus: 5.2, winRate: "%43.5", specialty: "Longchamp tepe inişi ve son 400m staminası" },
@@ -4621,7 +4641,9 @@ function parseRaces(bulletinText: string, oyunProgrami: string, customStartRace?
   let currentRaceCondition = "Genel Koşu Şartı";
   let hasEncounteredFirstRace = false;
 
-  for (const line of lines) {
+  for (const rawLine of lines) {
+    const expandedLines = expandCompactHorseLine(rawLine);
+    for (const line of expandedLines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
@@ -4742,6 +4764,7 @@ function parseRaces(bulletinText: string, oyunProgrami: string, customStartRace?
         });
       }
       currentRaceHorses.push(parsed);
+    }
     }
   }
 
@@ -5244,7 +5267,7 @@ async function parseRacesAsync(bulletinText: string, oyunProgrami: string, custo
   for (const r of races) {
     const validHorses = sanitizeAndDeduplicateRaceHorses(r.horses || []).filter((horse: any) => {
       const horseNorm = normalizeText(String(horse.name || ''));
-      return horseNorm.length >= 3 && sourceNorm.includes(horseNorm);
+      return sourceContainsHorseName(bulletinText, String(horse.name || ''));
     });
     if (validHorses.length > 0) {
       sanitizedRaces.push({
@@ -7023,7 +7046,7 @@ app.post(['/api/memory', '/api/notes'], (req, res) => {
   const newNote: DBNote = {
     id: db.notes.length > 0 ? Math.max(...db.notes.map(n => n.id)) + 1 : 1,
     timestamp: new Date().toISOString(),
-    title: title && title.trim() ? title.trim() : (normHorse ? `${normHorse} Notu` : "Özel Veri Bankası Kaydı"),
+    title: title && title.trim() ? title.trim() : (normHorse ? `${normHorse} Notu` : "Özel Veri Bankas�� Kaydı"),
     content: content.trim(),
     category: category || "GENEL",
     horse_name: normHorse,
@@ -10227,6 +10250,7 @@ app.post('/api/ai/chat', async (req, res) => {
       /^(?:[\=\-\*#]*\s*)?\d{1,2}\s*[\.\:\)]\s*(?:KOŞU|KOSU|AYAK)\b/im.test(userMessage) ||
       /\b\d{1,2}\s*\.\s*(?:KOŞU|KOSU|AYAK)\b/im.test(userMessage) ||
       /^(?:#|\b)?\d{1,2}\s*[\.\-\)\:\s\t]+(?:\(\d{1,2}\)\s*)?[A-Za-zÇĞİÖŞÜçğıöşü]/m.test(userMessage) ||
+  /(?:^|[\n,;])\s*\d{1,2}\s*[.)]?\s+[A-Za-zÇĞİÖŞÜçğıöşü]{2,}/m.test(userMessage) ||
       userMessage.includes("TAY / MALİ") || userMessage.includes("CALL ME") ||
       (userMessage.length > 50 && (userMessage.includes("KG") || userMessage.includes("DB") || userMessage.includes("SK") || userMessage.includes("AGF") || userMessage.includes("GANYAN") || userMessage.includes("K.TOKAÇOĞLU") || userMessage.includes("M.KAYA")))
     );
@@ -11373,7 +11397,7 @@ app.post('/api/ai/chat', async (req, res) => {
           ...race,
           horses: (race.horses || []).filter((horse: any) => {
             const name = normalizeText(String(horse.name || ''));
-            return name.length >= 3 && freshSourceNorm.includes(name);
+            return sourceContainsHorseName(userMessage, String(horse.name || ''));
           })
         }))
         .filter((race: any) => race.horses.length > 0);
