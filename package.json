@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.cjs",
     "lint": "tsc --noEmit",
-    "test:decision": "node --import tsx --test decision-confidence.test.ts"
+    "test": "npm run test:decision && npm run test:robots",
+    "test:decision": "node --import tsx --test decision-confidence.test.ts",
+    "test:robots": "node --import tsx --test tests/altili-coupon-orchestrator.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
